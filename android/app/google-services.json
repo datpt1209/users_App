@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "1028505396962",
+    "firebase_url": "https://uber-ola-and-indrive-clo-2b5a0-default-rtdb.firebaseio.com",
+    "project_id": "uber-ola-and-indrive-clo-2b5a0",
+    "storage_bucket": "uber-ola-and-indrive-clo-2b5a0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1028505396962:android:c31e3e57a0039afdd720bb",
+        "android_client_info": {
+          "package_name": "com.datphan.driversapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3dIcoMTz50tddUrFqFDD0hrGPGG6RSnw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1028505396962:android:680f8af15b33f8e0d720bb",
+        "android_client_info": {
+          "package_name": "com.datphan.usersapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3dIcoMTz50tddUrFqFDD0hrGPGG6RSnw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
