@@ -18,4 +18,23 @@ class UserModel
     id = snap.key;
     email = (snap.value as dynamic)["email"];
   }
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return switch (json) {
+      {
+      'phone': String phone,
+      'name': String name,
+      'id': String id,
+      'email': String email
+      } =>
+          UserModel(
+            id: id,
+            name: name,
+            phone: phone,
+            email: email
+          ),
+      _ => throw const FormatException('Failed to load album.'),
+    };
+  }
+
 }

@@ -19,4 +19,3 @@ String userDropOffAddress = "";
 String driverCarDetails = "";
 String driverName = "";
 String driverPhone = "";
-

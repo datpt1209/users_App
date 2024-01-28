@@ -18,8 +18,6 @@ class SignUpScreen extends StatefulWidget
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-
-
 class _SignUpScreenState extends State<SignUpScreen>
 {
   TextEditingController nameTextEditingController = TextEditingController();
@@ -51,6 +49,53 @@ class _SignUpScreenState extends State<SignUpScreen>
     }
   }
 
+  // saveUserInfoNow() async
+  // {
+  //   showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder: (BuildContext c)
+  //       {
+  //         return ProgressDialog(message: "Processing, Please wait...",);
+  //       }
+  //   );
+  //
+  //   final User? firebaseUser = (
+  //       await fAuth.createUserWithEmailAndPassword(
+  //         email: emailTextEditingController.text.trim(),
+  //         password: passwordTextEditingController.text.trim(),
+  //       ).catchError((msg){
+  //         Navigator.pop(context);
+  //         Fluttertoast.showToast(msg: "Error: " + msg.toString());
+  //       })
+  //   ).user;
+  //
+  //   if(firebaseUser != null)
+  //   {
+  //     Map userMap =
+  //     {
+  //       "id": firebaseUser.uid,
+  //       "name": nameTextEditingController.text.trim(),
+  //       "email": emailTextEditingController.text.trim(),
+  //       "phone": phoneTextEditingController.text.trim(),
+  //     };
+  //
+  //     DatabaseReference reference =  FirebaseDatabase.instance.ref().child("users");
+  //     reference.child(firebaseUser.uid).set(userMap);
+  //
+  //     currentFirebaseUser = firebaseUser;
+  //     Fluttertoast.showToast(msg: "Account has been Created.");
+  //     Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+  //
+  //
+  //   }
+  //   else
+  //   {
+  //     Navigator.pop(context);
+  //     Fluttertoast.showToast(msg: "Account has not been Created.");
+  //   }
+  //
+  // }
   saveUserInfoNow() async
   {
     showDialog(
@@ -88,8 +133,6 @@ class _SignUpScreenState extends State<SignUpScreen>
       currentFirebaseUser = firebaseUser;
       Fluttertoast.showToast(msg: "Account has been Created.");
       Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
-
-
     }
     else
     {

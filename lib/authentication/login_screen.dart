@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/signup_screen.dart';
 import 'package:users_app/splashScreen/splash_screen.dart';
+import 'package:http/http.dart' as http;
 
 import '../global/global.dart';
 import '../widgets/progress_dialog.dart';
@@ -15,8 +18,6 @@ class LoginScreen extends StatefulWidget
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-
-
 class _LoginScreenState extends State<LoginScreen>
 {
   TextEditingController emailTextEditingController = TextEditingController();
@@ -24,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   validateForm()
   {
-
     if(!emailTextEditingController.text.contains("@"))
     {
       Fluttertoast.showToast(msg: "Email address is not Valid");
@@ -38,6 +38,17 @@ class _LoginScreenState extends State<LoginScreen>
       loginUserNow();
     }
   }
+
+  // loginUserNow() async
+  // {
+  //     http.Response httpResponse = await http.get(Uri.parse('http://35.185.184.72/test'));
+  //
+  //         String responseData = httpResponse.body; //json
+  //         //var decodeResponseData = jsonDecode(responseData);
+  //         print(responseData);
+  // }
+
+
   loginUserNow() async
   {
     showDialog(
@@ -85,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen>
       Fluttertoast.showToast(msg: "Error Occurred during Login");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

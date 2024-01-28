@@ -16,8 +16,6 @@ class SelectNearestActiveDriversScreen extends StatefulWidget
   _SelectNearestActiveDriversScreenState createState() => _SelectNearestActiveDriversScreenState();
 }
 
-
-
 class _SelectNearestActiveDriversScreenState extends State<SelectNearestActiveDriversScreen>
 {
   String fareAmount = "";

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +15,16 @@ import 'package:users_app/authentication/login_screen.dart';
 import 'package:users_app/global/global.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
+import 'package:users_app/models/car_type.dart';
 import 'package:users_app/models/direction_details_info.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
-
+import 'package:http/http.dart' as http;
 import '../assistants/geofire_assistant.dart';
 import '../infoHandler/app_info.dart';
 import '../main.dart';
 import '../models/active_nearby_available_drivers.dart';
+
 
 class MainScreen extends StatefulWidget
 {
@@ -39,9 +42,28 @@ class _MainScreenState extends State<MainScreen>
     zoom: 14.4746,
   );
 
+  getCarType() async
+  {
+      http.Response httpResponse = await http.get(Uri.parse('https://effective-space-couscous-7rrrrqrv6g9hp9vx-8000.app.github.dev/cartypes'));
+
+          String responseData = httpResponse.body; //json
+          List<dynamic> decodeResponseData = jsonDecode(responseData);
+
+          List<dynamic> result = decodeResponseData.map((e) => e.name).toList();
+
+          print('List carType::' + result.toString());
+
+      return ;
+  }
+
+  List<String> carTypeList = ["4 Seat", "SUV", "VIP"];
+  String? selectedCarType;
+
+
+
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
-  double searchLocationContainerHeight = 220;
+  double searchLocationContainerHeight = 280;
   double waitingResponseFromDriverUIContainerHeight = 0;
   double assignedDriverContainerHeight = 0;
 
@@ -618,9 +640,7 @@ class _MainScreenState extends State<MainScreen>
               setState(() {
                 bottomPaddingOfMap = 245;
               });
-
               locateUserPosition();
-
             },
           ),
 
@@ -673,6 +693,45 @@ class _MainScreenState extends State<MainScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                   child: Column(
                     children: [
+
+                      Row(
+                        children: [
+                          DropdownButton(
+                            iconSize: 26,
+                            dropdownColor: Colors.white,
+                            hint: const Text(
+                              "Please choose Car Type",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey
+                              ),
+                            ),
+                            value: selectedCarType,
+                            onChanged: (newValue)
+                            {
+                              setState(() {
+                                selectedCarType = newValue.toString();
+                              });
+                            },
+                            items: carTypeList.map((car){
+                              return DropdownMenuItem(
+                                child:Text(
+                                  car,
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                                value:car,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10,),
+
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.grey,
+                      ),
                       //from
                       Row(
                         children: [
@@ -705,6 +764,7 @@ class _MainScreenState extends State<MainScreen>
                         thickness: 1,
                         color: Colors.grey,
                       ),
+
 
                       //to
                       GestureDetector(
@@ -761,6 +821,7 @@ class _MainScreenState extends State<MainScreen>
                         ),
                         onPressed: ()
                         {
+                          getCarType();
                           if(Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null)
                           {
                             saveRideRequestInformation();

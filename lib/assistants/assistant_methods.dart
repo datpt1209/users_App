@@ -136,8 +136,15 @@ class AssistantMethods
       "to": deviceRegistrationToken
     };
 
+    // var responseNotification = http.post(
+    //   Uri.parse("https://fcm.googleapis.com/fcm/send"),
+    //   headers: headerNotification,
+    //   body: jsonEncode(officialNotificationFormat),
+    // );
+    print(headerNotification);
+    print(officialNotificationFormat);
     var responseNotification = http.post(
-      Uri.parse("https://fcm.googleapis.com/fcm/send"),
+      Uri.parse("https://35.185.184.72/test"),
       headers: headerNotification,
       body: jsonEncode(officialNotificationFormat),
     );
