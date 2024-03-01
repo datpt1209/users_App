@@ -60,9 +60,7 @@ class _SelectNearestActiveDriversScreenState extends State<SelectNearestActiveDr
           {
             //delete/remove the ride request from database
             widget.referenceRideRequest!.remove();
-
             Fluttertoast.showToast(msg: "You have cancelled the ride request");
-
             SystemNavigator.pop();
           },
         ),
@@ -89,7 +87,7 @@ class _SelectNearestActiveDriversScreenState extends State<SelectNearestActiveDr
                 leading: Padding(
                   padding: const EdgeInsets.only(top: 2.0),
                   child: Image.asset(
-                    "images/" + dList[index]["car_details"]["type"].toString() + ".png",
+                    "images/${dList[index]["car_details"]["type"]}.png",
                     width: 70,
                   ),
                 ),

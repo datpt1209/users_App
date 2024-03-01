@@ -11,7 +11,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:users_app/assistants/assistant_methods.dart';
-import 'package:users_app/authentication/login_screen.dart';
 import 'package:users_app/global/global.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
@@ -19,10 +18,9 @@ import 'package:users_app/models/car_type.dart';
 import 'package:users_app/models/direction_details_info.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
-import 'package:http/http.dart' as http;
 import '../assistants/geofire_assistant.dart';
+import '../assistants/request_assistant.dart';
 import '../infoHandler/app_info.dart';
-import '../main.dart';
 import '../models/active_nearby_available_drivers.dart';
 
 
@@ -41,26 +39,8 @@ class _MainScreenState extends State<MainScreen>
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
-
-  getCarType() async
-  {
-      http.Response httpResponse = await http.get(Uri.parse('https://effective-space-couscous-7rrrrqrv6g9hp9vx-8000.app.github.dev/cartypes'));
-
-          String responseData = httpResponse.body; //json
-          List<dynamic> decodeResponseData = jsonDecode(responseData);
-
-          List<dynamic> result = decodeResponseData.map((e) => e.name).toList();
-
-          print('List carType::' + result.toString());
-
-      return ;
-  }
-
-  List<String> carTypeList = ["4 Seat", "SUV", "VIP"];
+  List<String> carTypeList = [];
   String? selectedCarType;
-
-
-
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
   double searchLocationContainerHeight = 280;
@@ -299,6 +279,7 @@ class _MainScreenState extends State<MainScreen>
     super.initState();
     checkIfPermissionAllowed();
     AssistantMethods.readCurrentOnlineUserInfo();
+    getCarType();
   }
 
   saveRideRequestInformation()
@@ -391,6 +372,25 @@ class _MainScreenState extends State<MainScreen>
     });
     onlineNearByAvailableDriversList = GeoFireAssistant.activeNearbyAvailableDriversList;
     searchNearestOnlineDrivers();
+  }
+
+  getCarType() async
+  {
+    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},{"id": 1, "name": "4 cho","capacity": 1, "is_deleted": "false"}]';
+    var json = jsonDecode(jsonString);
+    List<CarType> carType = carTypeFromJson(jsonString) as List<CarType>;
+    // for(int i = 0; i< carType.length; i++)
+    // {
+    //   carTypeList.add(carType[i].name.toString());
+    // }
+    carType.forEach(await (element)=>{carTypeList.add(element.name.toString())});
+    var nameJson = carType[1].name.toString();
+    print('JSON::' + nameJson);
+    print('Jsooo:::' + carTypeList.toString());
+    // String getCarTypeUrl = 'https://effective-space-couscous-7rrrrqrv6g9hp9vx-8000.app.github.dev/cartypes';
+    // var requestResponse = await RequestAssistant.receiveRequest(getCarTypeUrl);
+    // print(requestResponse);
+
   }
 
   updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async
@@ -601,6 +601,7 @@ class _MainScreenState extends State<MainScreen>
   @override
   Widget build(BuildContext context)
   {
+
     createActiveNearByDriverIconMarker();
     return Scaffold(
       key: sKey,
@@ -693,7 +694,6 @@ class _MainScreenState extends State<MainScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                   child: Column(
                     children: [
-
                       Row(
                         children: [
                           DropdownButton(
@@ -821,7 +821,6 @@ class _MainScreenState extends State<MainScreen>
                         ),
                         onPressed: ()
                         {
-                          getCarType();
                           if(Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null)
                           {
                             saveRideRequestInformation();

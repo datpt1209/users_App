@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -136,17 +135,13 @@ class AssistantMethods
       "to": deviceRegistrationToken
     };
 
-    // var responseNotification = http.post(
-    //   Uri.parse("https://fcm.googleapis.com/fcm/send"),
-    //   headers: headerNotification,
-    //   body: jsonEncode(officialNotificationFormat),
-    // );
-    print(headerNotification);
-    print(officialNotificationFormat);
     var responseNotification = http.post(
-      Uri.parse("https://35.185.184.72/test"),
+      Uri.parse("https://fcm.googleapis.com/fcm/send"),
       headers: headerNotification,
       body: jsonEncode(officialNotificationFormat),
     );
+    print(headerNotification);
+    print(officialNotificationFormat);
+
   }
 }

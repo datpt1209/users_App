@@ -1,11 +1,10 @@
-
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/login_screen.dart';
+import 'package:users_app/models/user_api.dart';
 import 'package:users_app/splashScreen/splash_screen.dart';
-
+import 'package:http/http.dart' as http;
 import '../global/global.dart';
 import '../widgets/progress_dialog.dart';
 
@@ -49,6 +48,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     }
   }
 
+  // save User to FireBase
   // saveUserInfoNow() async
   // {
   //   showDialog(
@@ -106,42 +106,32 @@ class _SignUpScreenState extends State<SignUpScreen>
           return ProgressDialog(message: "Processing, Please wait...",);
         }
     );
-
-    final User? firebaseUser = (
-        await fAuth.createUserWithEmailAndPassword(
-          email: emailTextEditingController.text.trim(),
-          password: passwordTextEditingController.text.trim(),
-        ).catchError((msg){
-          Navigator.pop(context);
-          Fluttertoast.showToast(msg: "Error: " + msg.toString());
-        })
-    ).user;
-
-    if(firebaseUser != null)
-    {
       Map userMap =
       {
-        "id": firebaseUser.uid,
-        "name": nameTextEditingController.text.trim(),
+        "fullName": nameTextEditingController.text.trim(),
         "email": emailTextEditingController.text.trim(),
-        "phone": phoneTextEditingController.text.trim(),
+        "mobilePhone": phoneTextEditingController.text.trim(),
+        "password": passwordTextEditingController.text.trim()
       };
+    var body = json.encode(userMap);
+    var response = await http.post(Uri.parse('http://35.185.184.72/account/api/v1/customer'),
+        headers: {"Content-Type": "application/json"},
+        body: body
+    );
 
-      DatabaseReference reference =  FirebaseDatabase.instance.ref().child("users");
-      reference.child(firebaseUser.uid).set(userMap);
+    print("${response.statusCode}");
+    print("${response.body}");
 
-      currentFirebaseUser = firebaseUser;
-      Fluttertoast.showToast(msg: "Account has been Created.");
+    if(response.statusCode == 200){
+      UserModel_API userModel_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      print("User::::::: ${userModel_API.fullName}");
+      Fluttertoast.showToast(msg: "Account has been Created: ${userModel_API.fullName}");
       Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
-    }
-    else
-    {
-      Navigator.pop(context);
-      Fluttertoast.showToast(msg: "Account has not been Created.");
-    }
 
+    }else{
+      throw Exception('Failed to create album');
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +251,6 @@ class _SignUpScreenState extends State<SignUpScreen>
               const SizedBox(height: 20,),
               ElevatedButton
                 (
-
                   onPressed: ()
                   {
                     validateForm();
