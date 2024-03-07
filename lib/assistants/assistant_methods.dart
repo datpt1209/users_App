@@ -33,6 +33,8 @@ class AssistantMethods
    }
    return humanReadableAddress;
   }
+
+
   static void readCurrentOnlineUserInfo() async
   {
     currentFirebaseUser = fAuth.currentUser;
@@ -47,6 +49,10 @@ class AssistantMethods
        userModelCurrentInfo =  UserModel.fromSnaphot(snap.snapshot);
       }
     });
+  }
+  static void readCurrentOnlineUserInfo_API() async
+  {
+    //Read user online with API
   }
 
   static Future<DirectionDetailsInfo?> obtainOriginToDestinationDirectionDetails(LatLng origionPosition, LatLng destinationPosition) async

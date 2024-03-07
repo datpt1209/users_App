@@ -1,30 +1,22 @@
 import 'dart:convert';
 
-List<CarType> carTypeFromJson(String str) {
-  final jsonData = json.decode(str);
-  return new List<CarType>.from(jsonData.map((x) => CarType.fromJson(x)));
-}
-
-String carTypeToJson(List<CarType> data) {
-  final dyn = new List<dynamic>.from(data.map((x) => x.toJson()));
-  return json.encode(dyn);
-}
 
 class CarType {
-  int? id;
-  String? name;
-  int? capaticy;
-  String? is_deleted;
+  final int id;
+  final String name;
+  final int capaticy;
+  final String is_deleted;
 
-  CarType({
-    this.id,
-    this.name,
-    this.capaticy,
-    this.is_deleted
+  const CarType({
+    required this.id,
+    required this.name,
+    required this.capaticy,
+    required this.is_deleted
   });
 
   factory CarType.fromJson(Map<String, dynamic> json){
-    return new CarType(
+
+    return CarType(
         id: json['id'],
         name: json['name'].toString(),
         capaticy: json['capaticy'],
@@ -40,4 +32,44 @@ class CarType {
           "is_deleted": is_deleted
         };
   }
+
+List<CarType> carTypeFromJson(String str) {
+  final jsonData = json.decode(str);
+  return List<CarType>.from(jsonData.map((x) => CarType.fromJson(x)));
+}
+
+String carTypeToJson(List<CarType> data) {
+  final List dyn = List<dynamic>.from(data.map((x) => x.toJson()));
+  return json.encode(dyn);
+}
+
+
+
+class Album {
+  final int userId;
+  final int id;
+  final String title;
+
+  const Album({
+    required this.userId,
+    required this.id,
+    required this.title,
+  });
+
+  factory Album.fromJson(Map<String, dynamic> json) {
+    return switch (json) {
+      {
+      'userId': int userId,
+      'id': int id,
+      'title': String title,
+      } =>
+          Album(
+            userId: userId,
+            id: id,
+            title: title,
+          ),
+      _ => throw const FormatException('Failed to load album.'),
+    };
+  }
+}
 

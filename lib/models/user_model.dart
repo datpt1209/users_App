@@ -33,7 +33,7 @@ class UserModel
             phone: phone,
             email: email
           ),
-      _ => throw const FormatException('Failed to load album.'),
+      _ => throw const FormatException('Failed to load User.'),
     };
   }
 

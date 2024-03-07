@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:users_app/models/user_api.dart';
 import 'package:users_app/models/user_model.dart';
 
 import '../models/direction_details_info.dart';
@@ -6,7 +7,7 @@ import '../models/direction_details_info.dart';
 final FirebaseAuth fAuth = FirebaseAuth.instance;
 User? currentFirebaseUser;
 UserModel? userModelCurrentInfo;
-
+UserModel_API? currentUser_API;
 List dList = [];//driverKeys Info List
 
 DirectionDetailsInfo? tripDirectionDetailsInfo;

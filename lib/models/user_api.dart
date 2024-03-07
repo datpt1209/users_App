@@ -2,46 +2,27 @@ import 'package:firebase_database/firebase_database.dart';
 
 class UserModel_API
 {
-  String? mobilePhone;
-  String fullName;
-  String? address;
-  String? password;
-  String? picture;
-  String? id;
+  final int id;
+  final String mobilePhone;
+  String? fullName;
   String? email;
 
   UserModel_API({
-    this.mobilePhone,
-    required this.fullName,
-    this.address,
-    this.email,
-    this.picture,
-    this.password
+    required this.id,
+    required this.mobilePhone,
+    this.fullName,
+    this.email
   });
-
-  // UserModel.fromSnaphot(DataSnapshot snap)
-  // {
-  //   phone = (snap.value as dynamic)["phone"];
-  //   name = (snap.value as dynamic)["name"];
-  //   id = snap.key;
-  //   email = (snap.value as dynamic)["email"];
-  // }
 
   factory UserModel_API.fromJson(Map<String, dynamic> json) {
     return switch (json) {
       {
-      //'mobilePhone': String? mobilePhone,
-      'fullName': String fullName,
-      //'email': String? email,
-      //'address': String? address,
-      //'password': String? password
+        'id': int id,
+        'mobilePhone': String mobilePhone,
       } =>
           UserModel_API(
-              fullName: fullName,
-              // mobilePhone: mobilePhone,
-              // email: email,
-              // password: password,
-              // address: address
+              id: id,
+              mobilePhone: mobilePhone,
           ),
       _ => throw const FormatException('Failed to load User.'),
     };
@@ -49,10 +30,9 @@ class UserModel_API
 
   Map<String, dynamic> toJson() =>
       {
+        "id":id,
+        "mobilePhone": mobilePhone,
         "fullName": fullName,
-        "password": password,
-        "address": address,
-        "email": email,
-        "mobilePhone": mobilePhone
+        "email": email
       };
 }

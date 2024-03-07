@@ -19,7 +19,7 @@ class _MySplashScreenState extends State<MySplashScreen>
 {
 
   startTimer(){
-    fAuth.currentUser != null ?  AssistantMethods.readCurrentOnlineUserInfo() : null;
+  /*  fAuth.currentUser != null ?  AssistantMethods.readCurrentOnlineUserInfo() : null;
     Timer( const Duration(seconds: 5), () async
     {
       if(await fAuth.currentUser != null)
@@ -32,6 +32,20 @@ class _MySplashScreenState extends State<MySplashScreen>
           //send user to home screen
           Navigator.push(context, MaterialPageRoute(builder: (c)=>LoginScreen()));
         }
+
+    });*/
+
+    Timer( const Duration(seconds: 5), () async
+    {
+      if(currentUser_API != null)
+      {
+        Navigator.push(context, MaterialPageRoute(builder: (c)=>MainScreen()));
+      }
+      else
+      {
+        //send user to home screen
+        Navigator.push(context, MaterialPageRoute(builder: (c)=>LoginScreen()));
+      }
 
     });
   }
