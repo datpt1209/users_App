@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:users_app/global/map_key_dart.dart';
+import 'package:users_app/widgets/place_pickup_title.dart';
 import '../assistants/request_assistant.dart';
 import '../models/predicted_places.dart';
 import '../widgets/place_prediction_title.dart';
 
-class SearchPlacesScreen extends StatefulWidget
-{
-  const SearchPlacesScreen({super.key});
+class Search_pickup_place extends StatefulWidget {
+  const Search_pickup_place({super.key});
 
   @override
-  State<SearchPlacesScreen> createState() => _SearchPlacesScreenState();
+  State<Search_pickup_place> createState() => _Search_pickup_placeState();
 }
 
-class _SearchPlacesScreenState extends State<SearchPlacesScreen>
-{
+class _Search_pickup_placeState extends State<Search_pickup_place> {
   List<PredictedPlaces> placesPredictedList = [];
 
   void findPlaceAutoCompleteSearch(String inputText) async
@@ -31,9 +30,7 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen>
       if(responseAutoCompleteSearch["status"] == "OK")
       {
         var placePredictions = responseAutoCompleteSearch["predictions"];
-
         var placePredictionsList = (placePredictions as List).map((jsonData) => PredictedPlaces.fromJson(jsonData)).toList();
-
         setState(() {
           placesPredictedList = placePredictionsList;
         });
@@ -75,7 +72,6 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen>
 
                   Stack(
                     children: [
-
                       GestureDetector(
                         onTap: ()
                         {
@@ -104,7 +100,6 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen>
 
                   Row(
                     children: [
-
                       const Icon(
                         Icons.adjust_sharp,
                         color: Colors.grey,
@@ -150,7 +145,7 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen>
               physics: ClampingScrollPhysics(),
               itemBuilder: (context, index)
               {
-                return PlacePredictionTileDesign(
+                return PlacePredictionPickUpDesign(
                   predictedPlaces: placesPredictedList[index],
                 );
               },

@@ -1,17 +1,21 @@
+import 'dart:math';
+
 import 'package:firebase_database/firebase_database.dart';
 
 class UserModel_API
 {
   final int id;
-  final String mobilePhone;
+   String? mobilePhone;
   String? fullName;
-  String? email;
+  String? picture;
+  String? address;
 
   UserModel_API({
     required this.id,
-    required this.mobilePhone,
+    this.mobilePhone,
     this.fullName,
-    this.email
+    this.picture,
+    this.address
   });
 
   factory UserModel_API.fromJson(Map<String, dynamic> json) {
@@ -28,11 +32,31 @@ class UserModel_API
     };
   }
 
+  factory UserModel_API.fromJsonInfo(Map<String, dynamic> json) {
+    return switch (json) {
+      {
+      'userId': int id,
+      'fullName': String fullName,
+      'address': String address,
+      'picture':String picture
+      } =>
+          UserModel_API(
+            id: id,
+            fullName: fullName,
+            address: address,
+            picture: picture
+          ),
+      _ => throw const FormatException('Failed to load User.'),
+    };
+  }
+
+
   Map<String, dynamic> toJson() =>
       {
         "id":id,
         "mobilePhone": mobilePhone,
         "fullName": fullName,
-        "email": email
+        "picture": picture,
+        'address': address
       };
 }

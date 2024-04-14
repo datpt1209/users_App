@@ -8,6 +8,7 @@ final FirebaseAuth fAuth = FirebaseAuth.instance;
 User? currentFirebaseUser;
 UserModel? userModelCurrentInfo;
 UserModel_API? currentUser_API;
+UserModel_API? userModel_APICurrentInfo;
 List dList = [];//driverKeys Info List
 
 DirectionDetailsInfo? tripDirectionDetailsInfo;

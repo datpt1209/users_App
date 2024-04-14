@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/global/global.dart';
-
+import '../models/user_api.dart';
 import '../splashScreen/splash_screen.dart';
 import '../widgets/progress_dialog.dart';
+import 'package:http/http.dart' as http;
 
 class UpdateInformation extends StatefulWidget {
   const UpdateInformation({super.key});
@@ -15,7 +18,8 @@ class UpdateInformation extends StatefulWidget {
 class _UpdateInformationState extends State<UpdateInformation> {
 
   TextEditingController nameTextEditingController = TextEditingController();
-  TextEditingController emailTextEditingController = TextEditingController();
+  TextEditingController addressTextEditingController = TextEditingController();
+  TextEditingController pictureTextEditingController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +30,6 @@ class _UpdateInformationState extends State<UpdateInformation> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-
               const SizedBox(height: 10,),
 
               Padding(
@@ -65,14 +68,37 @@ class _UpdateInformationState extends State<UpdateInformation> {
                 ),
               ),
               TextField(
-                controller: emailTextEditingController,
-                keyboardType: TextInputType.emailAddress,
+                controller: addressTextEditingController,
+                keyboardType: TextInputType.text,
                 style: const TextStyle(
                     color: Colors.grey
                 ),
                 decoration: const InputDecoration(
-                  labelText: "Email",
-                  hintText: "Email",
+                  labelText: "Address",
+                  hintText: "Address",
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  hintStyle:  TextStyle(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                  labelStyle:TextStyle(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+
+              TextField(
+                controller: pictureTextEditingController,
+                keyboardType: TextInputType.text,
+                style: const TextStyle(
+                    color: Colors.grey
+                ),
+                decoration: const InputDecoration(
+                  labelText: "Picture",
+                  hintText: "Picture",
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
@@ -117,9 +143,9 @@ class _UpdateInformationState extends State<UpdateInformation> {
     {
       Fluttertoast.showToast(msg: "Name must be at least 3 charaters");
     }
-    else if(!emailTextEditingController.text.contains("@"))
+    else if(addressTextEditingController.text.length < 5)
     {
-      Fluttertoast.showToast(msg: "Email address is not Valid");
+      Fluttertoast.showToast(msg: " Address is not Valid");
     }
     else
     {
@@ -136,16 +162,32 @@ class _UpdateInformationState extends State<UpdateInformation> {
           return ProgressDialog(message: "Processing, Please wait...",);
         }
     );
-    currentUser_API?.email = emailTextEditingController.text.trim();
-    currentUser_API?.fullName = nameTextEditingController.text.trim();
-    Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+
     Map userMap =
     {
       "fullName": nameTextEditingController.text.trim(),
-      "email": emailTextEditingController.text.trim()
+      "address": addressTextEditingController.text.trim(),
+      "picture": pictureTextEditingController.text.trim(),
+      "userId": currentUser_API?.id,
+      "mobilePhone": currentUser_API?.mobilePhone
     };
+    var body = json.encode(userMap);
+
     //Call API update information
+    var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/customer/update'),
+        headers: {"Content-Type": "application/json"},
+        body: body
+    );
+    if(response.statusCode == 200){
+      currentUser_API?.address = addressTextEditingController.text.trim();
+      currentUser_API?.fullName = nameTextEditingController.text.trim();
+      Fluttertoast.showToast(msg: "Login Successfully");
+      Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+
+    }else{
+      Navigator.pop(context);
+      Fluttertoast.showToast(msg: "Error Occurred during Login");
+      throw Exception('Failed to login with Customer');
+    }
   }
-
-
 }

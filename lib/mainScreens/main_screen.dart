@@ -1215,7 +1215,6 @@ class _MainScreenState extends State<MainScreen>
 
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -1228,10 +1227,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:users_app/assistants/assistant_methods.dart';
 import 'package:users_app/global/global.dart';
+import 'package:users_app/mainScreens/search_pickup_place.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
 import 'package:users_app/models/car_type.dart';
-import 'package:users_app/models/direction_details_info.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
 import '../assistants/geofire_assistant.dart';
@@ -1250,16 +1249,40 @@ class _MainScreenState extends State<MainScreen>
 {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newgoogleMapController;
+  List<CarType> CarTypeList = [];
+  void findCarType(String inputText) async
+  {
+    if (inputText.length > 1) //2 or more than 2 input characters
+        {
+      String urlAutoCompleteSearch = "";
+      var responseCarTypeSearch = await RequestAssistant.receiveRequest(
+          urlAutoCompleteSearch);
+
+      if (responseCarTypeSearch ==
+          "Error Occurred, Failed. No Response.") {
+        return;
+      }
+
+      if (responseCarTypeSearch["status"] == "OK") {
+        var cartypes = responseCarTypeSearch["cartype"];
+        var carTypeList = (cartypes as List).map((jsonData) =>
+            CarType.fromJson(jsonData)).toList();
+        setState(() {
+          CarTypeList = carTypeList;
+        });
+      }
+    }
+  }
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
   List<String> carTypeList = [];
-  String? selectedCarType;
+  CarType? selectedCarType;
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
-  double searchLocationContainerHeight = 280;
+  double searchLocationContainerHeight = 320;
   double waitingResponseFromDriverUIContainerHeight = 0;
   double assignedDriverContainerHeight = 0;
 
@@ -1293,6 +1316,7 @@ class _MainScreenState extends State<MainScreen>
   StreamSubscription<DatabaseEvent>? tripRideRequestInfoStreamSubscription;
   String userRideRequestStatus = "";
   bool requestPositionInfo = true;
+  String? selectedPaymentMethod;
 
   blackThemegoogleMap()
   {
@@ -1471,10 +1495,33 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
+  @override
+  void initState()
+  {
+    super.initState();
+    checkIfPermissionAllowed();
+    AssistantMethods.readCurrentOnlineUserInfo_API();
+    //getCarType();
+  }
+
+  void dropdownCarType(CarType? selectedValue){
+    if(selectedValue is CarType){
+      setState(() {
+        selectedCarType = selectedValue;
+      });
+    }
+  }
+  void dropdownPaymentMethod(String? selectedValue){
+    if(selectedValue is String){
+      setState(() {
+        selectedPaymentMethod = selectedValue;
+      });
+    }
+  }
+
   locateUserPosition() async
   {
-    userName = currentUser_API!.fullName!;
-    userEmail = currentUser_API!.email!;
+    userName = userModel_APICurrentInfo!.fullName!;
     Position cPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     userCurrentPosition = cPosition;
 
@@ -1487,15 +1534,6 @@ class _MainScreenState extends State<MainScreen>
     print("this is your address " + humanReadableAddress);
 
     initializeGeoFireListener();
-  }
-
-  @override
-  void initState()
-  {
-    super.initState();
-    checkIfPermissionAllowed();
-    //AssistantMethods.readCurrentOnlineUserInfo();
-    //getCarType();
   }
 
   saveRideRequestInformation()
@@ -1855,7 +1893,7 @@ class _MainScreenState extends State<MainScreen>
               blackThemegoogleMap();
 
               setState(() {
-                bottomPaddingOfMap = 245;
+                bottomPaddingOfMap = 330;
               });
               locateUserPosition();
             },
@@ -1910,11 +1948,12 @@ class _MainScreenState extends State<MainScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                   child: Column(
                     children: [
+                      //select CarType
                       Row(
                         children: [
                           DropdownButton(
                             iconSize: 26,
-                            dropdownColor: Colors.white,
+                            dropdownColor: Colors.transparent,
                             hint: const Text(
                               "Please choose Car Type",
                               style: TextStyle(
@@ -1922,20 +1961,16 @@ class _MainScreenState extends State<MainScreen>
                                   color: Colors.grey
                               ),
                             ),
+
                             value: selectedCarType,
-                            onChanged: (newValue)
-                            {
-                              setState(() {
-                                selectedCarType = newValue.toString();
-                              });
-                            },
-                            items: carTypeList.map((car){
+                            onChanged: dropdownCarType,
+                            items: CarTypeList.map((carType){
                               return DropdownMenuItem(
                                 child:Text(
-                                  car,
+                                  carType.name,
                                   style: const TextStyle(color: Colors.grey),
                                 ),
-                                value:car,
+                                value:carType,
                               );
                             }).toList(),
                           ),
@@ -1948,26 +1983,28 @@ class _MainScreenState extends State<MainScreen>
                         thickness: 1,
                         color: Colors.grey,
                       ),
-                      //from
+
                       Row(
                         children: [
-                          const Icon(Icons.add_location_alt_outlined, color: Colors.grey,),
-                          const SizedBox(width:12.0,),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "From",
-                                style: TextStyle(color: Colors.grey, fontSize: 12),
+                          DropdownButton(
+                            iconSize: 26,
+                            dropdownColor: Colors.transparent,
+                            hint: const Text(
+                              "Please choose Payment method",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey
                               ),
-                              Text(
-                                Provider.of<AppInfo>(context).userPickUpLocation != null
-                                    ? (Provider.of<AppInfo>(context).userPickUpLocation!.locationName!).substring(0,40) + "..."
-                                    :"Not getting location"
-                                ,
-                                style: const TextStyle(color: Colors.grey, fontSize: 14),
-                              ),
-
+                            ),
+                            style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey
+                            ),
+                            value: selectedPaymentMethod,
+                            onChanged: dropdownPaymentMethod,
+                            items: const [
+                              DropdownMenuItem(child: Text("Cash"), value:"Cash"),
+                              DropdownMenuItem(child: Text("ATM"), value:"ATM"),
                             ],
                           ),
                         ],
@@ -1981,8 +2018,54 @@ class _MainScreenState extends State<MainScreen>
                         color: Colors.grey,
                       ),
 
+                      //select pick up address
+                      GestureDetector(
+                        onTap: () async
+                        {
+                          //search places screen
+                          var responseFromSearchScreen = await Navigator.push(context, MaterialPageRoute(builder: (c) => Search_pickup_place()));
 
-                      //to
+                          if(responseFromSearchScreen == "obtainedDropoff")
+                          {
+                            setState(() {
+                              openNavigationDrawer = false;
+                            });
+                            //draw routes - draw polyline
+                            await drawPolyLineFromOriginDestination();
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_location_alt_outlined, color: Colors.grey,),
+                            const SizedBox(width:12.0,),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "From",
+                                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
+                                Text(
+                                  Provider.of<AppInfo>(context).userPickUpLocation != null
+                                      ? Provider.of<AppInfo>(context).userPickUpLocation!.locationName!
+                                      : "Where are you?",
+                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 10,),
+
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.grey,
+                      ),
+
+                      //select drop off address
                       GestureDetector(
                         onTap: () async
                         {
@@ -2048,7 +2131,7 @@ class _MainScreenState extends State<MainScreen>
 
                         },
                         style: ElevatedButton.styleFrom(
-                            primary: Colors.green,
+                            backgroundColor: Colors.green,
                             textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)
                         ),
                       )
@@ -2181,7 +2264,7 @@ class _MainScreenState extends State<MainScreen>
                             //call Driver
                           },
                           style: ElevatedButton.styleFrom(
-                            primary: Colors.green,
+                            backgroundColor: Colors.green,
                           ),
                           icon: const Icon(
                             Icons.phone_android,

@@ -215,6 +215,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/signup_screen.dart';
 import 'package:users_app/authentication/updateInformartion_screen.dart';
+import 'package:users_app/mainScreens/main_screen.dart';
 import 'package:users_app/splashScreen/splash_screen.dart';
 import 'package:http/http.dart' as http;
 
@@ -261,15 +262,13 @@ class _LoginScreenState extends State<LoginScreen>
     );
     Map userMap =
     {
-      /* "fullName": nameTextEditingController.text.trim(),
-      "email": emailTextEditingController.text.trim(),*/
       "mobilePhone": mobilePhoneTextEditingController.text.trim(),
       "password": passwordTextEditingController.text.trim(),
       "type": "CUSTOMER"
     };
     var body = json.encode(userMap);
     print("body:::: ${body}");
-    var response = await http.post(Uri.parse('http://35.185.184.72/account/api/v1/login'),
+    var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/login'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
@@ -278,13 +277,11 @@ class _LoginScreenState extends State<LoginScreen>
     print("${response.body}");
 
     if(response.statusCode == 200){
-      currentUser_API =  await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      currentUser_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
       print("UserID::::::: ${currentUser_API?.id}");
-      UserModel_API userModel_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-      print("UserID::::::: ${userModel_API.id}");
-      print("UserPhone::::::: ${userModel_API.mobilePhone}");
-      Fluttertoast.showToast(msg: "Login Successfully with CustomerID: ${userModel_API.id}");
-      Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+      print("UserPhone::::::: ${currentUser_API?.mobilePhone}");
+      Fluttertoast.showToast(msg: "Login Successfully with CustomerID: ${currentUser_API?.id}");
+      Navigator.push(context, MaterialPageRoute(builder: (c)=>MainScreen()));
 
     }else{
       Navigator.pop(context);
@@ -319,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               TextField(
                 controller: mobilePhoneTextEditingController,
-                keyboardType: TextInputType.emailAddress,
+                keyboardType: TextInputType.number,
                 style: const TextStyle(
                     color: Colors.grey
                 ),
@@ -369,7 +366,6 @@ class _LoginScreenState extends State<LoginScreen>
                 onPressed: ()
                 {
                   validateForm();
-                  //Navigator.push(context,MaterialPageRoute(builder: (c)=> CarInfoScreen()));
                 },
                 style: ElevatedButton.styleFrom(
                     primary: Colors.lightGreenAccent
