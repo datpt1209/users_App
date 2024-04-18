@@ -26,7 +26,7 @@ class _PlacePredictionPickUpDesignState extends State<PlacePredictionPickUpDesig
     showDialog(
       context: context,
       builder: (BuildContext context) => ProgressDialog(
-        message: "Setting Up Drop-Off, Please wait...",
+        message: "Setting Up Pick Up, Please wait...",
       ),
     );
     String placeDirectionDetailsUrl = "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$mapkey";
@@ -51,10 +51,10 @@ class _PlacePredictionPickUpDesignState extends State<PlacePredictionPickUpDesig
       Provider.of<AppInfo>(context, listen: false).updatePickUpLocationAddress(directions);
 
       setState(() {
-        userDropOffAddress = directions.locationName!;
+        userPickUpAddress = directions.locationName!;
       });
 
-      Navigator.pop(context, "obtainedDropoff");
+      Navigator.pop(context, "obtainedPickUp");
     }
   }
 

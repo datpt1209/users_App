@@ -1288,6 +1288,7 @@ class _MainScreenState extends State<MainScreen>
   double assignedDriverContainerHeight = 0;
 
   Position? userCurrentPosition;
+  Position? userPickUpPosition;
   var geoLocator = Geolocator();
 
   LocationPermission? _locationPermission;
@@ -1522,7 +1523,7 @@ class _MainScreenState extends State<MainScreen>
 
   locateUserPosition() async
   {
-    userName = userModel_APICurrentInfo!.fullName!;
+
     Position cPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     userCurrentPosition = cPosition;
 
@@ -1533,6 +1534,7 @@ class _MainScreenState extends State<MainScreen>
     newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
     String humanReadableAddress = await AssistantMethods.searchAddressForGeographicCoOrdinates(userCurrentPosition!, context);
     print("this is your address " + humanReadableAddress);
+    userName = userModel_APICurrentInfo!.fullName!;
 
     initializeGeoFireListener();
   }
@@ -1892,7 +1894,6 @@ class _MainScreenState extends State<MainScreen>
 
               //for black theme google map
               blackThemegoogleMap();
-
               setState(() {
                 bottomPaddingOfMap = 330;
               });
@@ -2031,13 +2032,23 @@ class _MainScreenState extends State<MainScreen>
                           //search places screen
                           var responseFromSearchScreen = await Navigator.push(context, MaterialPageRoute(builder: (c) => Search_pickup_place()));
 
-                          if(responseFromSearchScreen == "obtainedDropoff")
+                          if(responseFromSearchScreen == "obtainedPickUp")
                           {
-                            setState(() {
-                              openNavigationDrawer = false;
-                            });
+                            // setState(() async {
+                            //   openNavigationDrawer = false;
+                            //
+                            //
+                            // });
+                            var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
+                            var originLatLng = LatLng(originPosition!.locationLatitude!, originPosition.locationLongitude!);
+
+
+                            CameraPosition cameraPosition = CameraPosition(target: originLatLng, zoom: 14);
+
+                            newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+
                             //draw routes - draw polyline
-                            await drawPolyLineFromOriginDestination();
+                            //await drawPolyLineFromOriginDestination();
                           }
                         },
                         child: Row(
@@ -2053,7 +2064,7 @@ class _MainScreenState extends State<MainScreen>
                                 ),
                                 Text(
                                   Provider.of<AppInfo>(context).userPickUpLocation != null
-                                      ? Provider.of<AppInfo>(context).userPickUpLocation!.locationName!
+                                      ? (Provider.of<AppInfo>(context).userPickUpLocation!.locationName!).substring(0,30) + "..."
                                       : "Where are you?",
                                   style: const TextStyle(color: Colors.grey, fontSize: 14),
                                 ),
@@ -2469,7 +2480,6 @@ class _MainScreenState extends State<MainScreen>
             break;
         }
       }
-
       setState(() {});
     });
   }
