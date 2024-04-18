@@ -190,33 +190,44 @@ class AssistantMethods
   }
 
 
-  static void readCurrentOnlineUserInfo() async
-  {
-    currentFirebaseUser = fAuth.currentUser;
-    DatabaseReference userRef = FirebaseDatabase.instance
-        .ref()
-        .child("users")
-        .child(currentFirebaseUser!.uid);
-    userRef.once().then((snap)
-    {
-      if(snap.snapshot.value != null)
-      {
-        userModelCurrentInfo =  UserModel.fromSnaphot(snap.snapshot);
-      }
-    });
-  }
+  // static void readCurrentOnlineUserInfo() async
+  // {
+  //   currentFirebaseUser = fAuth.currentUser;
+  //   DatabaseReference userRef = FirebaseDatabase.instance
+  //       .ref()
+  //       .child("users")
+  //       .child(currentFirebaseUser!.uid);
+  //   userRef.once().then((snap)
+  //   {
+  //     if(snap.snapshot.value != null)
+  //     {
+  //       userModelCurrentInfo =  UserModel.fromSnaphot(snap.snapshot);
+  //     }
+  //   });
+  // }
   static void readCurrentOnlineUserInfo_API() async
   {
     int? Id = currentUser_API?.id;
-    String uri = Uri.parse('http://35.185.184.72/account/api/v1/customer/${Id}').toString();
-    print("URI::::${uri}");
-    var response = await http.get(Uri.parse('http://35.185.184.72/account/api/v1/customer/${Id}'));
-    print("Response Update:::::${response.body}");
-
+    var response = await http.get(Uri.parse("http://34.142.183.254/account/api/v1/customer/${Id}"));
     if(response.statusCode == 200){
-      userModel_APICurrentInfo = UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
+      userModel_APICurrentInfo =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
       print("userModel_APICurrentInfo?::::::: ${userModel_APICurrentInfo?.fullName}");
+    }else{
+      return;
     }
+
+    // var urlReadCurrentUserOnline = "http://34.142.183.254/account/api/v1/customer/${Id}";
+    // var responseReadCurrentUserOnline = await RequestAssistant.receiveRequest(urlReadCurrentUserOnline);
+    // if(responseReadCurrentUserOnline == "Error Occurred, Failed. No Response.")
+    // {
+    //   return;
+    //
+    // }
+    // else
+    // {
+    //     userModel_APICurrentInfo =  UserModel_API.fromJsonInfo(jsonDecode(responseReadCurrentUserOnline.body) as Map<String, dynamic>);
+    //     print("userModel_APICurrentInfo?::::::: ${userModel_APICurrentInfo?.fullName}");
+    // };
   }
 
   static Future<DirectionDetailsInfo?> obtainOriginToDestinationDirectionDetails(LatLng origionPosition, LatLng destinationPosition) async

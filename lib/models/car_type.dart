@@ -3,13 +3,13 @@ import 'dart:convert';
 class CarType {
   final int id;
   final String name;
-  final int capaticy;
+  final int capacity;
   final String is_deleted;
 
   const CarType({
     required this.id,
     required this.name,
-    required this.capaticy,
+    required this.capacity,
     required this.is_deleted
   });
 
@@ -18,7 +18,7 @@ class CarType {
     return CarType(
         id: json['id'],
         name: json['name'].toString(),
-        capaticy: json['capaticy'],
+        capacity: json['capacity'],
         is_deleted: json['is_deleted'].toString()
     );
   }
@@ -27,7 +27,7 @@ class CarType {
         {
           "id": id,
           "name": name,
-          "capaticy": capaticy,
+          "capacity": capacity,
           "is_deleted": is_deleted
         };
   }

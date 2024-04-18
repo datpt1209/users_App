@@ -267,14 +267,10 @@ class _LoginScreenState extends State<LoginScreen>
       "type": "CUSTOMER"
     };
     var body = json.encode(userMap);
-    print("body:::: ${body}");
     var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/login'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
-
-    print("${response.statusCode}");
-    print("${response.body}");
 
     if(response.statusCode == 200){
       currentUser_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);

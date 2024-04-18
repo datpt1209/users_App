@@ -1215,6 +1215,7 @@ class _MainScreenState extends State<MainScreen>
 
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -1249,37 +1250,37 @@ class _MainScreenState extends State<MainScreen>
 {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newgoogleMapController;
-  List<CarType> CarTypeList = [];
-  void findCarType(String inputText) async
-  {
-    if (inputText.length > 1) //2 or more than 2 input characters
-        {
-      String urlAutoCompleteSearch = "";
-      var responseCarTypeSearch = await RequestAssistant.receiveRequest(
-          urlAutoCompleteSearch);
-
-      if (responseCarTypeSearch ==
-          "Error Occurred, Failed. No Response.") {
-        return;
-      }
-
-      if (responseCarTypeSearch["status"] == "OK") {
-        var cartypes = responseCarTypeSearch["cartype"];
-        var carTypeList = (cartypes as List).map((jsonData) =>
-            CarType.fromJson(jsonData)).toList();
-        setState(() {
-          CarTypeList = carTypeList;
-        });
-      }
-    }
-  }
+  String? selectedCarType;
+  // void findCarType(String inputText) async
+  // {
+  //   if (inputText.length > 1) //2 or more than 2 input characters
+  //       {
+  //     String urlAutoCompleteSearch = "";
+  //     var responseCarTypeSearch = await RequestAssistant.receiveRequest(
+  //         urlAutoCompleteSearch);
+  //
+  //     if (responseCarTypeSearch ==
+  //         "Error Occurred, Failed. No Response.") {
+  //       return;
+  //     }
+  //
+  //     if (responseCarTypeSearch["status"] == "OK") {
+  //       var cartypes = responseCarTypeSearch["cartype"];
+  //       var carTypeList = (cartypes as List).map((jsonData) =>
+  //           CarType.fromJson(jsonData)).toList();
+  //       setState(() {
+  //         CarTypeList = carTypeList;
+  //       });
+  //     }
+  //   }
+  // }
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
-  List<String> carTypeList = [];
-  CarType? selectedCarType;
+  List<CarType> carTypeList = [];
+
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
   double searchLocationContainerHeight = 320;
@@ -1501,13 +1502,13 @@ class _MainScreenState extends State<MainScreen>
     super.initState();
     checkIfPermissionAllowed();
     AssistantMethods.readCurrentOnlineUserInfo_API();
-    //getCarType();
+    getCarType();
   }
 
   void dropdownCarType(CarType? selectedValue){
     if(selectedValue is CarType){
       setState(() {
-        selectedCarType = selectedValue;
+        selectedCarType = selectedValue.name;
       });
     }
   }
@@ -1628,24 +1629,25 @@ class _MainScreenState extends State<MainScreen>
     searchNearestOnlineDrivers();
   }
 
-/*  getCarType() async
+  getCarType() async
   {
-    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},{"id": 1, "name": "4 cho","capacity": 1, "is_deleted": "false"}]';
-    var json = jsonDecode(jsonString);
-    List<CarType> carType = carTypeFromJson(jsonString) as List<CarType>;
+    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},{"id": 2, "name": "7 cho","capacity": 1, "is_deleted": "false"}]';
+
+    carTypeList = carTypeFromJson(jsonString);
+
     // for(int i = 0; i< carType.length; i++)
     // {
     //   carTypeList.add(carType[i].name.toString());
     // }
-    carType.forEach(await (element)=>{carTypeList.add(element.name.toString())});
-    var nameJson = carType[1].name.toString();
-    print('JSON::' + nameJson);
-    print('Jsooo:::' + carTypeList.toString());
+    // carType.forEach((element)=>{carTypeList.add(element)});
+    // var nameJson = carType[1].name.toString();
+    // print('JSON::' + nameJson);
+    // print('Jsooo:::' + carTypeList.toString());
     // String getCarTypeUrl = 'https://effective-space-couscous-7rrrrqrv6g9hp9vx-8000.app.github.dev/cartypes';
     // var requestResponse = await RequestAssistant.receiveRequest(getCarTypeUrl);
     // print(requestResponse);
 
-  }*/
+  }
 
   updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async
   {
@@ -1855,7 +1857,6 @@ class _MainScreenState extends State<MainScreen>
   @override
   Widget build(BuildContext context)
   {
-
     createActiveNearByDriverIconMarker();
     return Scaffold(
       key: sKey,
@@ -1961,18 +1962,23 @@ class _MainScreenState extends State<MainScreen>
                                   color: Colors.grey
                               ),
                             ),
-
                             value: selectedCarType,
-                            onChanged: dropdownCarType,
-                            items: CarTypeList.map((carType){
+
+                            items: carTypeList.map((carType){
                               return DropdownMenuItem(
                                 child:Text(
                                   carType.name,
                                   style: const TextStyle(color: Colors.grey),
                                 ),
-                                value:carType,
+                                value:carType.name,
                               );
                             }).toList(),
+                            onChanged: (val){
+                              setState(() {
+                                selectedCarType = val;
+                                print("selectcar:::::::::${selectedCarType}");
+                              });
+                            }
                           ),
                         ],
                       ),
@@ -1983,7 +1989,7 @@ class _MainScreenState extends State<MainScreen>
                         thickness: 1,
                         color: Colors.grey,
                       ),
-
+                      //select payment method
                       Row(
                         children: [
                           DropdownButton(
@@ -2319,10 +2325,9 @@ class _MainScreenState extends State<MainScreen>
     pLineCoOrdinatesList.clear();
     if(decodedPoyPointsResultList.isNotEmpty)
     {
-      decodedPoyPointsResultList.forEach((PointLatLng pointLatLng)
-      {
+      for (var pointLatLng in decodedPoyPointsResultList) {
         pLineCoOrdinatesList.add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
-      });
+      }
     }
 
     polyLineSet.clear();
