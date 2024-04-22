@@ -1,11 +1,8 @@
-import 'dart:math';
-
-import 'package:firebase_database/firebase_database.dart';
 
 class UserModel_API
 {
   final int id;
-   String? mobilePhone;
+  String? mobilePhone;
   String? fullName;
   String? picture;
   String? address;
@@ -28,7 +25,7 @@ class UserModel_API
               id: id,
               mobilePhone: mobilePhone,
           ),
-      _ => throw const FormatException('Failed to load User.'),
+      _ => throw Exception('Failed to load User.'),
     };
   }
 
@@ -36,17 +33,19 @@ class UserModel_API
     return switch (json) {
       {
       'userId': int id,
+      'mobilePhone': String mobilePhone,
       'fullName': String fullName,
       'address': String address,
       'picture':String picture
       } =>
           UserModel_API(
             id: id,
+            mobilePhone: mobilePhone,
             fullName: fullName,
             address: address,
             picture: picture
           ),
-      _ => throw const FormatException('Failed to load User.'),
+      _ => throw Exception('Failed to load User.'),
     };
   }
 

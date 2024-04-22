@@ -1238,6 +1238,7 @@ import '../assistants/geofire_assistant.dart';
 import '../assistants/request_assistant.dart';
 import '../infoHandler/app_info.dart';
 import '../models/active_nearby_available_drivers.dart';
+import 'package:http/http.dart' as http;
 
 
 class MainScreen extends StatefulWidget
@@ -1250,7 +1251,7 @@ class _MainScreenState extends State<MainScreen>
 {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newgoogleMapController;
-  String? selectedCarType;
+  CarType? selectedCarType;
   // void findCarType(String inputText) async
   // {
   //   if (inputText.length > 1) //2 or more than 2 input characters
@@ -1286,6 +1287,9 @@ class _MainScreenState extends State<MainScreen>
   double searchLocationContainerHeight = 320;
   double waitingResponseFromDriverUIContainerHeight = 0;
   double assignedDriverContainerHeight = 0;
+  int? tripFare;
+
+  String? idTrip;
 
   Position? userCurrentPosition;
   Position? userPickUpPosition;
@@ -1497,19 +1501,11 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
-  @override
-  void initState()
-  {
-    super.initState();
-    checkIfPermissionAllowed();
-    AssistantMethods.readCurrentOnlineUserInfo_API();
-    getCarType();
-  }
 
   void dropdownCarType(CarType? selectedValue){
     if(selectedValue is CarType){
       setState(() {
-        selectedCarType = selectedValue.name;
+        selectedCarType = selectedValue;
       });
     }
   }
@@ -1534,106 +1530,204 @@ class _MainScreenState extends State<MainScreen>
     newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
     String humanReadableAddress = await AssistantMethods.searchAddressForGeographicCoOrdinates(userCurrentPosition!, context);
     print("this is your address " + humanReadableAddress);
-    userName = userModel_APICurrentInfo!.fullName!;
+    userName = currentUser_API_Info!.fullName!;
 
     initializeGeoFireListener();
   }
 
   saveRideRequestInformation()
-  {
+  async {
     //1. save the RideRequest Information
-    referenceRideRequest = FirebaseDatabase.instance.ref().child("All Ride Requests").push();//id
-
     var originLocation = Provider.of<AppInfo>(context, listen:false).userPickUpLocation;
-    var destinationLocation = Provider.of<AppInfo>(context, listen:false).userDropOffLocation;
+    var destinationLocation =Provider.of<AppInfo>(context, listen:false).userDropOffLocation;
 
-    Map originLocationMap =
+    Map customer =
+    {
+      "id": currentUser_API_Info!.id.toString(),
+      "name": currentUser_API_Info!.fullName.toString(),
+      "phone": currentUser_API_Info!.mobilePhone.toString(),
+      "rank": "NORMAL",
+      "type": "customer",
+    };
+    Map destination =
     {
       //"key": value
-      "latitude": originLocation!.locationLatitude.toString(),
-      "longitude": originLocation!.locationLongitude.toString(),
+      "address": destinationLocation!.locationName.toString(),
+      "coordinate": [destinationLocation!.locationLatitude,destinationLocation!.locationLongitude]
     };
-    Map destinationLocationMap =
+
+    Map pickup =
     {
       //"key": value
-      "latitude": destinationLocation!.locationLatitude.toString(),
-      "longitude": destinationLocation!.locationLongitude.toString(),
+      "address": originLocation!.locationName.toString(),
+      "coordinate": [originLocation!.locationLatitude,originLocation!.locationLongitude],
     };
 
-    Map userInformationMap =
+    Map requester =
     {
-      "origin": originLocationMap,
-      "destination": destinationLocationMap,
-      "time":DateTime.now().toString(),
-      "userName": userModelCurrentInfo!.name,
-      "userPhone": userModelCurrentInfo!.phone,
-      "originAddress": originLocation.locationName,
-      "destinationAddress": destinationLocation.locationName,
-      "driverId": "waiting",
+      "id": currentUser_API_Info!.id.toString(),
+      "name": currentUser_API_Info!.fullName.toString(),
+      "phone": currentUser_API_Info!.mobilePhone.toString(),
+      "rank": "NORMAL",
+      "type": "customer",
     };
 
-    referenceRideRequest!.set(userInformationMap);
-    tripRideRequestInfoStreamSubscription = referenceRideRequest!.onValue.listen((eventSnap)
+    Map rideRequest =
     {
-      if(eventSnap.snapshot.value == null)
-      {
-        return;
-      }
-      if((eventSnap.snapshot.value as Map)["car_details"] != null)
-      {
-        setState(() {
-          driverCarDetails = (eventSnap.snapshot.value as Map)["car_details"].toString();
-        });
-      }
-      if((eventSnap.snapshot.value as Map)["driverPhone"] != null)
-      {
-        setState(() {
-          driverPhone = (eventSnap.snapshot.value as Map)["driverPhone"].toString();
-        });
-      }
-      if((eventSnap.snapshot.value as Map)["driverName"] != null)
-      {
-        setState(() {
-          driverName = (eventSnap.snapshot.value as Map)["driverName"].toString();
-        });
-      }
-      if((eventSnap.snapshot.value as Map)["status"] != null)
-      {
-        userRideRequestStatus = (eventSnap.snapshot.value as Map)["status"];
-      }
+      "customer": customer,
+      "destination": destination,
+      "distance": tripDirectionDetailsInfo!.distance_value! / 1000,
+      "id": idTrip,
+      "pickup": pickup,
+      "price": tripFare,
+      "request_time": DateTime.now().toString(),
+      "request_type": "ORDINARY",
+      "requester":requester,
+      "vehicle_type":selectedCarType?.id.toString(),
+    };
 
-      if((eventSnap.snapshot.value as Map)["driverLocation"] != null)
-      {
-        double driverCurrentPositionLat = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["latitude"].toString());
-        double driverCurrentPositionLng = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["longitude"].toString());
+    print("Ride request:::::::: ${json.encode(rideRequest)}");
 
-        LatLng driverCurrentPositionLatLng = LatLng(driverCurrentPositionLat, driverCurrentPositionLng);
-        //Status = accepted
-        if(userRideRequestStatus == "accepted")
-        {
-          updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng);
-        }
-        //Status = arrived
-        if(userRideRequestStatus == "arrived")
-        {
-          setState(() {
-            driverRideStatus = "Driver has Arrived";
-          });
-        }
-        //Status = ontrip
-        if(userRideRequestStatus == "ontrip")
-        {
-          updateReachingTimeToUserDropOffLocation(driverCurrentPositionLatLng);
-        }
-      }
-    });
-    onlineNearByAvailableDriversList = GeoFireAssistant.activeNearbyAvailableDriversList;
-    searchNearestOnlineDrivers();
+    var body = json.encode(rideRequest);
+    var response = await http.post(Uri.parse('https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/book/customer'),
+        headers: {"Content-Type": "application/json"},
+        body: body
+    );
+    print("THIS IS RIDE REQUEST RESPONSE::::::: ${response.body}");
+
+    if(response.statusCode == 201){
+      var responseDecode = jsonDecode(response.body);
+     print("This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
+      showWaitingResponseFromDriverUI();
+    }else{
+      Fluttertoast.showToast(msg: "Error Occurred during Login");
+      throw Exception('Failed to login with Customer');
+    }
+
+    // tripRideRequestInfoStreamSubscription = referenceRideRequest!.onValue.listen((eventSnap)
+    // {
+    //   if(eventSnap.snapshot.value == null)
+    //   {
+    //     return;
+    //   }
+    //   if((eventSnap.snapshot.value as Map)["car_details"] != null)
+    //   {
+    //     setState(() {
+    //       driverCarDetails = (eventSnap.snapshot.value as Map)["car_details"].toString();
+    //     });
+    //   }
+    //   if((eventSnap.snapshot.value as Map)["driverPhone"] != null)
+    //   {
+    //     setState(() {
+    //       driverPhone = (eventSnap.snapshot.value as Map)["driverPhone"].toString();
+    //     });
+    //   }
+    //   if((eventSnap.snapshot.value as Map)["driverName"] != null)
+    //   {
+    //     setState(() {
+    //       driverName = (eventSnap.snapshot.value as Map)["driverName"].toString();
+    //     });
+    //   }
+    //   if((eventSnap.snapshot.value as Map)["status"] != null)
+    //   {
+    //     userRideRequestStatus = (eventSnap.snapshot.value as Map)["status"];
+    //   }
+    //
+    //   if((eventSnap.snapshot.value as Map)["driverLocation"] != null)
+    //   {
+    //     double driverCurrentPositionLat = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["latitude"].toString());
+    //     double driverCurrentPositionLng = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["longitude"].toString());
+    //
+    //     LatLng driverCurrentPositionLatLng = LatLng(driverCurrentPositionLat, driverCurrentPositionLng);
+    //     //Status = accepted
+    //     if(userRideRequestStatus == "accepted")
+    //     {
+    //       updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng);
+    //     }
+    //     //Status = arrived
+    //     if(userRideRequestStatus == "arrived")
+    //     {
+    //       setState(() {
+    //         driverRideStatus = "Driver has Arrived";
+    //       });
+    //     }
+    //     //Status = ontrip
+    //     if(userRideRequestStatus == "ontrip")
+    //     {
+    //       updateReachingTimeToUserDropOffLocation(driverCurrentPositionLatLng);
+    //     }
+    //   }
+    // });
+    //onlineNearByAvailableDriversList = GeoFireAssistant.activeNearbyAvailableDriversList;
+    //searchNearestOnlineDrivers();
+  }
+  calculateFare()
+  async {
+    //1. save the RideRequest Information
+    var originLocation = Provider.of<AppInfo>(context, listen:false).userPickUpLocation;
+    var destinationLocation =Provider.of<AppInfo>(context, listen:false).userDropOffLocation;
+
+    Map customer =
+    {
+      "id": currentUser_API_Info!.id.toString(),
+      "name": currentUser_API_Info!.fullName.toString(),
+      "phone": currentUser_API_Info!.mobilePhone.toString(),
+      "rank": "NORMAL",
+      "type": "customer",
+    };
+    Map destination =
+    {
+      //"key": value
+      "address": destinationLocation!.locationName.toString(),
+      "coordinate": [destinationLocation!.locationLatitude,destinationLocation!.locationLongitude]
+    };
+
+    Map pickup =
+    {
+      //"key": value
+      "address": originLocation!.locationName.toString(),
+      "coordinate": [originLocation!.locationLatitude,originLocation!.locationLongitude],
+    };
+
+    Map rideRequest =
+    {
+      "customer": customer,
+      "destination": destination,
+      "distance": tripDirectionDetailsInfo!.distance_value! / 1000,
+      "pickup": pickup,
+      "request_type": "ORDINARY",
+      "vehicle_type":selectedCarType?.id.toString(),
+
+    };
+    print("Ride request:::::::: ${json.encode(rideRequest)}");
+
+    // String jsonString = '{"trip_id": "661019270869ad41e23a1e46","code": "Estimated","message": 140.000 }';
+    // var response = jsonDecode(jsonString);
+
+    var body = json.encode(rideRequest);
+    var response = await http.post(Uri.parse('https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/estimate/customer'),
+        headers: {"Content-Type": "application/json"},
+        body: body
+    );
+    print("THIS IS RIDE REQUEST RESPONSE::::::: ${response.body}");
+
+    if(response.statusCode == 200){
+      var responseDecode = jsonDecode(response.body);
+      setState(() {
+        tripFare = responseDecode['result'];
+        idTrip = responseDecode['trip_id'];
+      });
+    }else{
+
+      Fluttertoast.showToast(msg: "Error Occurred during Estimate FARE");
+      throw Exception('Failed to Estimate FARE');
+    }
   }
 
   getCarType() async
   {
-    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},{"id": 2, "name": "7 cho","capacity": 1, "is_deleted": "false"}]';
+    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},'
+        '{"id": 2, "name": "7 cho","capacity": 1, "is_deleted": "false"}]';
 
     carTypeList = carTypeFromJson(jsonString);
 
@@ -1656,9 +1750,7 @@ class _MainScreenState extends State<MainScreen>
     if(requestPositionInfo == true)
     {
       requestPositionInfo = false;
-
       LatLng userPickUpPosition = LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
-
       var directionDetailsInfo = await AssistantMethods.obtainOriginToDestinationDirectionDetails(
         driverCurrentPositionLatLng,
         userPickUpPosition,
@@ -1857,6 +1949,15 @@ class _MainScreenState extends State<MainScreen>
 
 
   @override
+  void initState()
+  {
+    super.initState();
+    checkIfPermissionAllowed();
+    AssistantMethods.readCurrentOnlineUserInfo_API();
+    getCarType();
+  }
+
+  @override
   Widget build(BuildContext context)
   {
     createActiveNearByDriverIconMarker();
@@ -1947,14 +2048,14 @@ class _MainScreenState extends State<MainScreen>
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   child: Column(
                     children: [
                       //select CarType
                       Row(
                         children: [
                           DropdownButton(
-                            iconSize: 26,
+                            iconSize: 20,
                             dropdownColor: Colors.transparent,
                             hint: const Text(
                               "Please choose Car Type",
@@ -1964,27 +2065,24 @@ class _MainScreenState extends State<MainScreen>
                               ),
                             ),
                             value: selectedCarType,
-
                             items: carTypeList.map((carType){
                               return DropdownMenuItem(
                                 child:Text(
                                   carType.name,
                                   style: const TextStyle(color: Colors.grey),
                                 ),
-                                value:carType.name,
+                                value:carType,
                               );
                             }).toList(),
                             onChanged: (val){
                               setState(() {
-                                selectedCarType = val;
+                                selectedCarType = val as CarType?;
                                 print("selectcar:::::::::${selectedCarType}");
                               });
                             }
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10,),
-
                       const Divider(
                         height: 1,
                         thickness: 1,
@@ -1994,7 +2092,7 @@ class _MainScreenState extends State<MainScreen>
                       Row(
                         children: [
                           DropdownButton(
-                            iconSize: 26,
+                            iconSize: 20,
                             dropdownColor: Colors.transparent,
                             hint: const Text(
                               "Please choose Payment method",
@@ -2016,9 +2114,6 @@ class _MainScreenState extends State<MainScreen>
                           ),
                         ],
                       ),
-
-                      const SizedBox(height: 10,),
-
                       const Divider(
                         height: 1,
                         thickness: 1,
@@ -2034,21 +2129,10 @@ class _MainScreenState extends State<MainScreen>
 
                           if(responseFromSearchScreen == "obtainedPickUp")
                           {
-                            // setState(() async {
-                            //   openNavigationDrawer = false;
-                            //
-                            //
-                            // });
                             var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
                             var originLatLng = LatLng(originPosition!.locationLatitude!, originPosition.locationLongitude!);
-
-
                             CameraPosition cameraPosition = CameraPosition(target: originLatLng, zoom: 14);
-
                             newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-
-                            //draw routes - draw polyline
-                            //await drawPolyLineFromOriginDestination();
                           }
                         },
                         child: Row(
@@ -2095,7 +2179,9 @@ class _MainScreenState extends State<MainScreen>
                               openNavigationDrawer = false;
                             });
                             //draw routes - draw polyline
+
                             await drawPolyLineFromOriginDestination();
+                            await calculateFare();
                           }
                         },
                         child: Row(
@@ -2127,6 +2213,26 @@ class _MainScreenState extends State<MainScreen>
                         height: 1,
                         thickness: 1,
                         color: Colors.grey,
+                      ),
+                    //Fare
+                      Row(
+                        children: [
+                          const Icon(Icons.monetization_on_outlined, color: Colors.grey,),
+                          const SizedBox(width:12.0,),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Fare",
+                                style: TextStyle(color: Colors.grey, fontSize: 12),
+                              ),
+                              Text(
+                                tripFare != null? tripFare.toString(): "",
+                                style: const TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 16,),
@@ -2310,6 +2416,7 @@ class _MainScreenState extends State<MainScreen>
 
   Future<void> drawPolyLineFromOriginDestination() async
   {
+
     var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
     var destinationPosition = Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
 

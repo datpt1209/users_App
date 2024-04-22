@@ -53,7 +53,6 @@ class _PlacePredictionPickUpDesignState extends State<PlacePredictionPickUpDesig
       setState(() {
         userPickUpAddress = directions.locationName!;
       });
-
       Navigator.pop(context, "obtainedPickUp");
     }
   }

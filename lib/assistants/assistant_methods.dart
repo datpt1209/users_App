@@ -210,8 +210,8 @@ class AssistantMethods
     int? Id = currentUser_API?.id;
     var response = await http.get(Uri.parse("http://34.142.183.254/account/api/v1/customer/${Id}"));
     if(response.statusCode == 200){
-      userModel_APICurrentInfo =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
-      print("userModel_APICurrentInfo?::::::: ${userModel_APICurrentInfo?.fullName}");
+      currentUser_API_Info =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
+      print("userModel_APICurrentInfo?::::::: ${currentUser_API_Info?.fullName}");
     }else{
       return;
     }
@@ -255,6 +255,7 @@ class AssistantMethods
 
   static double calculateFareAmountFromOriginToDestination(DirectionDetailsInfo directionDetailsInfo)
   {
+
     double timeTraveledFareAmountPerMinute = (directionDetailsInfo.duration_value! / 60) * 0.1;
     double distanceTraveledFareAmountPerKilometer = (directionDetailsInfo.duration_value! / 1000) * 0.1;
 
