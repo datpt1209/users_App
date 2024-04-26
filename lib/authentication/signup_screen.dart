@@ -297,13 +297,11 @@ class _SignUpScreenState extends State<SignUpScreen>
 */
 
 import 'dart:convert';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/login_screen.dart';
 import 'package:users_app/authentication/updateInformartion_screen.dart';
 import 'package:users_app/models/user_api.dart';
-import 'package:users_app/splashScreen/splash_screen.dart';
 import 'package:http/http.dart' as http;
 import '../global/global.dart';
 import '../widgets/progress_dialog.dart';
@@ -460,7 +458,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     };
     var body = json.encode(userMap);
     print("body:::: ${body}");
-    var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/register'),
+    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/register'),
         headers: {"Content-Type": "application/json"},
         body: body
     );

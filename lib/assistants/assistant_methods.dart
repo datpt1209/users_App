@@ -153,7 +153,6 @@ class AssistantMethods
 }*/
 
 import 'dart:convert';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -163,7 +162,6 @@ import 'package:users_app/global/global.dart';
 import 'package:users_app/global/map_key_dart.dart';
 import 'package:users_app/infoHandler/app_info.dart';
 import 'package:users_app/models/directions.dart';
-import 'package:users_app/models/user_model.dart';
 import '../models/direction_details_info.dart';
 import '../models/user_api.dart';
 
@@ -189,45 +187,16 @@ class AssistantMethods
     return humanReadableAddress;
   }
 
-
-  // static void readCurrentOnlineUserInfo() async
-  // {
-  //   currentFirebaseUser = fAuth.currentUser;
-  //   DatabaseReference userRef = FirebaseDatabase.instance
-  //       .ref()
-  //       .child("users")
-  //       .child(currentFirebaseUser!.uid);
-  //   userRef.once().then((snap)
-  //   {
-  //     if(snap.snapshot.value != null)
-  //     {
-  //       userModelCurrentInfo =  UserModel.fromSnaphot(snap.snapshot);
-  //     }
-  //   });
-  // }
   static void readCurrentOnlineUserInfo_API() async
   {
     int? Id = currentUser_API?.id;
-    var response = await http.get(Uri.parse("http://34.142.183.254/account/api/v1/customer/${Id}"));
+    var response = await http.get(Uri.parse("http://4.144.131.165/account/api/v1/customer/${Id}"));
     if(response.statusCode == 200){
       currentUser_API_Info =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
       print("userModel_APICurrentInfo?::::::: ${currentUser_API_Info?.fullName}");
     }else{
       return;
     }
-
-    // var urlReadCurrentUserOnline = "http://34.142.183.254/account/api/v1/customer/${Id}";
-    // var responseReadCurrentUserOnline = await RequestAssistant.receiveRequest(urlReadCurrentUserOnline);
-    // if(responseReadCurrentUserOnline == "Error Occurred, Failed. No Response.")
-    // {
-    //   return;
-    //
-    // }
-    // else
-    // {
-    //     userModel_APICurrentInfo =  UserModel_API.fromJsonInfo(jsonDecode(responseReadCurrentUserOnline.body) as Map<String, dynamic>);
-    //     print("userModel_APICurrentInfo?::::::: ${userModel_APICurrentInfo?.fullName}");
-    // };
   }
 
   static Future<DirectionDetailsInfo?> obtainOriginToDestinationDirectionDetails(LatLng origionPosition, LatLng destinationPosition) async

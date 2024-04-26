@@ -1235,7 +1235,6 @@ import 'package:users_app/models/car_type.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
 import '../assistants/geofire_assistant.dart';
-import '../assistants/request_assistant.dart';
 import '../infoHandler/app_info.dart';
 import '../models/active_nearby_available_drivers.dart';
 import 'package:http/http.dart' as http;
@@ -1250,32 +1249,8 @@ class MainScreen extends StatefulWidget
 class _MainScreenState extends State<MainScreen>
 {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
-  GoogleMapController? newgoogleMapController;
+  GoogleMapController? newGoogleMapController;
   CarType? selectedCarType;
-  // void findCarType(String inputText) async
-  // {
-  //   if (inputText.length > 1) //2 or more than 2 input characters
-  //       {
-  //     String urlAutoCompleteSearch = "";
-  //     var responseCarTypeSearch = await RequestAssistant.receiveRequest(
-  //         urlAutoCompleteSearch);
-  //
-  //     if (responseCarTypeSearch ==
-  //         "Error Occurred, Failed. No Response.") {
-  //       return;
-  //     }
-  //
-  //     if (responseCarTypeSearch["status"] == "OK") {
-  //       var cartypes = responseCarTypeSearch["cartype"];
-  //       var carTypeList = (cartypes as List).map((jsonData) =>
-  //           CarType.fromJson(jsonData)).toList();
-  //       setState(() {
-  //         CarTypeList = carTypeList;
-  //       });
-  //     }
-  //   }
-  // }
-
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
@@ -1326,7 +1301,7 @@ class _MainScreenState extends State<MainScreen>
 
   blackThemegoogleMap()
   {
-    newgoogleMapController!.setMapStyle('''
+    newGoogleMapController!.setMapStyle('''
                     [
                       {
                         "elementType": "geometry",
@@ -1527,11 +1502,10 @@ class _MainScreenState extends State<MainScreen>
 
     CameraPosition cameraPosition = CameraPosition(target: latLngPosition, zoom: 14);
 
-    newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    newGoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
     String humanReadableAddress = await AssistantMethods.searchAddressForGeographicCoOrdinates(userCurrentPosition!, context);
     print("this is your address " + humanReadableAddress);
     userName = currentUser_API_Info!.fullName!;
-
     initializeGeoFireListener();
   }
 
@@ -1553,14 +1527,14 @@ class _MainScreenState extends State<MainScreen>
     {
       //"key": value
       "address": destinationLocation!.locationName.toString(),
-      "coordinate": [destinationLocation!.locationLatitude,destinationLocation!.locationLongitude]
+      "coordinate": [destinationLocation.locationLatitude,destinationLocation.locationLongitude]
     };
 
     Map pickup =
     {
       //"key": value
       "address": originLocation!.locationName.toString(),
-      "coordinate": [originLocation!.locationLatitude,originLocation!.locationLongitude],
+      "coordinate": [originLocation.locationLatitude,originLocation.locationLongitude],
     };
 
     Map requester =
@@ -1600,39 +1574,10 @@ class _MainScreenState extends State<MainScreen>
      print("This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
       showWaitingResponseFromDriverUI();
     }else{
-      Fluttertoast.showToast(msg: "Error Occurred during Login");
-      throw Exception('Failed to login with Customer');
+      Fluttertoast.showToast(msg: "Error Occurred during Estimate Fare");
+      throw Exception('Failed to call Driver');
     }
 
-    // tripRideRequestInfoStreamSubscription = referenceRideRequest!.onValue.listen((eventSnap)
-    // {
-    //   if(eventSnap.snapshot.value == null)
-    //   {
-    //     return;
-    //   }
-    //   if((eventSnap.snapshot.value as Map)["car_details"] != null)
-    //   {
-    //     setState(() {
-    //       driverCarDetails = (eventSnap.snapshot.value as Map)["car_details"].toString();
-    //     });
-    //   }
-    //   if((eventSnap.snapshot.value as Map)["driverPhone"] != null)
-    //   {
-    //     setState(() {
-    //       driverPhone = (eventSnap.snapshot.value as Map)["driverPhone"].toString();
-    //     });
-    //   }
-    //   if((eventSnap.snapshot.value as Map)["driverName"] != null)
-    //   {
-    //     setState(() {
-    //       driverName = (eventSnap.snapshot.value as Map)["driverName"].toString();
-    //     });
-    //   }
-    //   if((eventSnap.snapshot.value as Map)["status"] != null)
-    //   {
-    //     userRideRequestStatus = (eventSnap.snapshot.value as Map)["status"];
-    //   }
-    //
     //   if((eventSnap.snapshot.value as Map)["driverLocation"] != null)
     //   {
     //     double driverCurrentPositionLat = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["latitude"].toString());
@@ -1679,14 +1624,14 @@ class _MainScreenState extends State<MainScreen>
     {
       //"key": value
       "address": destinationLocation!.locationName.toString(),
-      "coordinate": [destinationLocation!.locationLatitude,destinationLocation!.locationLongitude]
+      "coordinate": [destinationLocation.locationLatitude,destinationLocation.locationLongitude]
     };
 
     Map pickup =
     {
       //"key": value
       "address": originLocation!.locationName.toString(),
-      "coordinate": [originLocation!.locationLatitude,originLocation!.locationLongitude],
+      "coordinate": [originLocation.locationLatitude,originLocation.locationLongitude],
     };
 
     Map rideRequest =
@@ -1711,7 +1656,7 @@ class _MainScreenState extends State<MainScreen>
     );
     print("THIS IS RIDE REQUEST RESPONSE::::::: ${response.body}");
 
-    if(response.statusCode == 200){
+    if(response.statusCode == 201){
       var responseDecode = jsonDecode(response.body);
       setState(() {
         tripFare = responseDecode['result'];
@@ -1726,23 +1671,12 @@ class _MainScreenState extends State<MainScreen>
 
   getCarType() async
   {
+    var getCarTypeUrl = "https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/vehicle-types/";
+
     String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},'
         '{"id": 2, "name": "7 cho","capacity": 1, "is_deleted": "false"}]';
 
     carTypeList = carTypeFromJson(jsonString);
-
-    // for(int i = 0; i< carType.length; i++)
-    // {
-    //   carTypeList.add(carType[i].name.toString());
-    // }
-    // carType.forEach((element)=>{carTypeList.add(element)});
-    // var nameJson = carType[1].name.toString();
-    // print('JSON::' + nameJson);
-    // print('Jsooo:::' + carTypeList.toString());
-    // String getCarTypeUrl = 'https://effective-space-couscous-7rrrrqrv6g9hp9vx-8000.app.github.dev/cartypes';
-    // var requestResponse = await RequestAssistant.receiveRequest(getCarTypeUrl);
-    // print(requestResponse);
-
   }
 
   updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async
@@ -1776,7 +1710,7 @@ class _MainScreenState extends State<MainScreen>
 
       var dropOffLocation = Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
 
-      LatLng userDestinationPosition = LatLng(dropOffLocation!.locationLatitude!, dropOffLocation!.locationLongitude!);
+      LatLng userDestinationPosition = LatLng(dropOffLocation!.locationLatitude!, dropOffLocation.locationLongitude!);
 
       var directionDetailsInfo = await AssistantMethods.obtainOriginToDestinationDirectionDetails(
         driverCurrentPositionLatLng,
@@ -1899,7 +1833,7 @@ class _MainScreenState extends State<MainScreen>
     //assign /Set rideRequestId to newRideStatus in Driver Parent node for chosen driver
     FirebaseDatabase.instance.ref()
         .child("drivers")
-        .child(chosenDriverId!)
+        .child(chosenDriverId)
         .child("newRideStatus")
         .set(referenceRideRequest!.key);
 
@@ -1991,7 +1925,7 @@ class _MainScreenState extends State<MainScreen>
             onMapCreated: (GoogleMapController controller)
             {
               _controllerGoogleMap.complete(controller);
-              newgoogleMapController = controller;
+              newGoogleMapController = controller;
 
               //for black theme google map
               blackThemegoogleMap();
@@ -2054,33 +1988,59 @@ class _MainScreenState extends State<MainScreen>
                       //select CarType
                       Row(
                         children: [
-                          DropdownButton(
-                            iconSize: 20,
-                            dropdownColor: Colors.transparent,
-                            hint: const Text(
-                              "Please choose Car Type",
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey
-                              ),
-                            ),
-                            value: selectedCarType,
-                            items: carTypeList.map((carType){
-                              return DropdownMenuItem(
-                                child:Text(
-                                  carType.name,
-                                  style: const TextStyle(color: Colors.grey),
+                          // DropdownButton(
+                          //   iconSize: 20,
+                          //   dropdownColor: Colors.transparent,
+                          //   hint: const Text(
+                          //     "Please choose Car Type",
+                          //     style: TextStyle(
+                          //         fontSize: 14,
+                          //         color: Colors.grey
+                          //     ),
+                          //   ),
+                          //   value: selectedCarType,
+                          //   items: carTypeList.map((carType){
+                          //     return DropdownMenuItem(
+                          //       child:Text(
+                          //         carType.name,
+                          //         style: const TextStyle(color: Colors.grey),
+                          //       ),
+                          //       value:carType,
+                          //     );
+                          //   }).toList(),
+                          //   onChanged: (val){
+                          //     setState(() {
+                          //       selectedCarType = val as CarType?;
+                          //       print("selectcar:::::::::${selectedCarType}");
+                          //     });
+                          //   }
+                          // ),
+
+                          DropdownButton(iconSize: 20,
+                              dropdownColor: Colors.transparent,
+                              hint: const Text(
+                                "Please choose Car Type",
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey
                                 ),
-                                value:carType,
-                              );
-                            }).toList(),
-                            onChanged: (val){
-                              setState(() {
-                                selectedCarType = val as CarType?;
-                                print("selectcar:::::::::${selectedCarType}");
-                              });
-                            }
-                          ),
+                              ),
+                              value: selectedCarType,
+                              items: carTypeList.map((carType){
+                                return DropdownMenuItem(
+                                  child:Text(
+                                    carType.name,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  value:carType,
+                                );
+                              }).toList(),
+                              onChanged: (val){
+                                setState(() {
+                                  selectedCarType = val as CarType?;
+                                  print("selectcar:::::::::${selectedCarType}");
+                                });
+                              })
                         ],
                       ),
                       const Divider(
@@ -2132,7 +2092,7 @@ class _MainScreenState extends State<MainScreen>
                             var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
                             var originLatLng = LatLng(originPosition!.locationLatitude!, originPosition.locationLongitude!);
                             CameraPosition cameraPosition = CameraPosition(target: originLatLng, zoom: 14);
-                            newgoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+                            newGoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
                           }
                         },
                         child: Row(
@@ -2235,7 +2195,12 @@ class _MainScreenState extends State<MainScreen>
                         ],
                       ),
 
-                      const SizedBox(height: 16,),
+                      const SizedBox(height: 10,),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.grey,
+                      ),
 
                       ElevatedButton(
                         child: const Text(
@@ -2438,7 +2403,7 @@ class _MainScreenState extends State<MainScreen>
     print (directionDetailsInfo!.e_points);
 
     PolylinePoints pPoints = PolylinePoints();
-    List<PointLatLng> decodedPoyPointsResultList = pPoints.decodePolyline(directionDetailsInfo!.e_points!);
+    List<PointLatLng> decodedPoyPointsResultList = pPoints.decodePolyline(directionDetailsInfo.e_points!);
 
     pLineCoOrdinatesList.clear();
     if(decodedPoyPointsResultList.isNotEmpty)
@@ -2488,7 +2453,7 @@ class _MainScreenState extends State<MainScreen>
       boundsLatLng = LatLngBounds(southwest: originLatLng, northeast: destinationLatLng);
     }
 
-    newgoogleMapController!.animateCamera(CameraUpdate.newLatLngBounds(boundsLatLng,65));
+    newGoogleMapController!.animateCamera(CameraUpdate.newLatLngBounds(boundsLatLng,65));
 
     Marker originMarker = Marker(
       markerId: const MarkerId("originID"),
@@ -2538,7 +2503,6 @@ class _MainScreenState extends State<MainScreen>
   initializeGeoFireListener()
   {
     Geofire.initialize("activeDrivers");
-
     Geofire.queryAtLocation(
         userCurrentPosition!.latitude, userCurrentPosition!.longitude, 10)!
         .listen((map) {

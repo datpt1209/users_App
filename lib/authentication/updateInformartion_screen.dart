@@ -1,9 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/global/global.dart';
-import '../models/user_api.dart';
 import '../splashScreen/splash_screen.dart';
 import '../widgets/progress_dialog.dart';
 import 'package:http/http.dart' as http;
@@ -174,7 +172,7 @@ class _UpdateInformationState extends State<UpdateInformation> {
     var body = json.encode(userMap);
 
     //Call API update information
-    var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/customer/update'),
+    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/customer/update'),
         headers: {"Content-Type": "application/json"},
         body: body
     );

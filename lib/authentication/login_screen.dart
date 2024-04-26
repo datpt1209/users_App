@@ -208,17 +208,11 @@ class _LoginScreenState extends State<LoginScreen>
 */
 
 import 'dart:convert';
-
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/signup_screen.dart';
-import 'package:users_app/authentication/updateInformartion_screen.dart';
 import 'package:users_app/mainScreens/main_screen.dart';
-import 'package:users_app/splashScreen/splash_screen.dart';
 import 'package:http/http.dart' as http;
-
 import '../global/global.dart';
 import '../models/user_api.dart';
 import '../widgets/progress_dialog.dart';
@@ -267,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen>
       "type": "CUSTOMER"
     };
     var body = json.encode(userMap);
-    var response = await http.post(Uri.parse('http://34.142.183.254/account/api/v1/login'),
+    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/login'),
         headers: {"Content-Type": "application/json"},
         body: body
     );

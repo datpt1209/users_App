@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:users_app/assistants/assistant_methods.dart';
 import 'package:users_app/authentication/login_screen.dart';
 import 'package:users_app/mainScreens/main_screen.dart';
 import '../global/global.dart';

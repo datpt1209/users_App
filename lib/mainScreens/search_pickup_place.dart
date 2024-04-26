@@ -3,7 +3,6 @@ import 'package:users_app/global/map_key_dart.dart';
 import 'package:users_app/widgets/place_pickup_title.dart';
 import '../assistants/request_assistant.dart';
 import '../models/predicted_places.dart';
-import '../widgets/place_prediction_title.dart';
 
 class Search_pickup_place extends StatefulWidget {
   const Search_pickup_place({super.key});
