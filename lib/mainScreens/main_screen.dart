@@ -1239,6 +1239,8 @@ import '../infoHandler/app_info.dart';
 import '../models/active_nearby_available_drivers.dart';
 import 'package:http/http.dart' as http;
 
+import '../push_notifications/push_notification_system.dart';
+
 
 class MainScreen extends StatefulWidget
 {
@@ -1494,18 +1496,16 @@ class _MainScreenState extends State<MainScreen>
 
   locateUserPosition() async
   {
-
     Position cPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     userCurrentPosition = cPosition;
-
     LatLng latLngPosition = LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
-
     CameraPosition cameraPosition = CameraPosition(target: latLngPosition, zoom: 14);
-
     newGoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
     String humanReadableAddress = await AssistantMethods.searchAddressForGeographicCoOrdinates(userCurrentPosition!, context);
     print("this is your address " + humanReadableAddress);
     userName = currentUser_API_Info!.fullName!;
+    userEmail = currentUser_API_Info!.mobilePhone!;
+
     initializeGeoFireListener();
   }
 
@@ -1563,7 +1563,7 @@ class _MainScreenState extends State<MainScreen>
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/book/customer'),
+    var response = await http.post(Uri.parse('http://4.144.131.165/trip/api/v1/book/customer'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
@@ -1646,11 +1646,8 @@ class _MainScreenState extends State<MainScreen>
     };
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
-    // String jsonString = '{"trip_id": "661019270869ad41e23a1e46","code": "Estimated","message": 140.000 }';
-    // var response = jsonDecode(jsonString);
-
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/estimate/customer'),
+    var response = await http.post(Uri.parse('http://4.144.131.165/trip/api/v1/estimate/customer'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
@@ -1881,14 +1878,22 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
+  readCurrentDriverInformation() async
+  {
+    PushNotificationSystem pushNotificationSystem = PushNotificationSystem();
+    pushNotificationSystem.initializeCloudMessaging(context);
+    pushNotificationSystem.generateAndGetToken();
+  }
+
 
   @override
-  void initState()
+  void  initState()
   {
     super.initState();
     checkIfPermissionAllowed();
     AssistantMethods.readCurrentOnlineUserInfo_API();
     getCarType();
+    readCurrentDriverInformation();
   }
 
   @override
@@ -1988,34 +1993,6 @@ class _MainScreenState extends State<MainScreen>
                       //select CarType
                       Row(
                         children: [
-                          // DropdownButton(
-                          //   iconSize: 20,
-                          //   dropdownColor: Colors.transparent,
-                          //   hint: const Text(
-                          //     "Please choose Car Type",
-                          //     style: TextStyle(
-                          //         fontSize: 14,
-                          //         color: Colors.grey
-                          //     ),
-                          //   ),
-                          //   value: selectedCarType,
-                          //   items: carTypeList.map((carType){
-                          //     return DropdownMenuItem(
-                          //       child:Text(
-                          //         carType.name,
-                          //         style: const TextStyle(color: Colors.grey),
-                          //       ),
-                          //       value:carType,
-                          //     );
-                          //   }).toList(),
-                          //   onChanged: (val){
-                          //     setState(() {
-                          //       selectedCarType = val as CarType?;
-                          //       print("selectcar:::::::::${selectedCarType}");
-                          //     });
-                          //   }
-                          // ),
-
                           DropdownButton(iconSize: 20,
                               dropdownColor: Colors.transparent,
                               hint: const Text(
@@ -2108,7 +2085,7 @@ class _MainScreenState extends State<MainScreen>
                                 ),
                                 Text(
                                   Provider.of<AppInfo>(context).userPickUpLocation != null
-                                      ? (Provider.of<AppInfo>(context).userPickUpLocation!.locationName!).substring(0,30) + "..."
+                                      ? (Provider.of<AppInfo>(context).userPickUpLocation!.locationName!).substring(0,10) + "..."
                                       : "Where are you?",
                                   style: const TextStyle(color: Colors.grey, fontSize: 14),
                                 ),

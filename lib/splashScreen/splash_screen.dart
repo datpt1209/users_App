@@ -45,14 +45,12 @@ class _MySplashScreenState extends State<MySplashScreen>
         //send user to home screen
         Navigator.push(context, MaterialPageRoute(builder: (c)=>LoginScreen()));
       }
-
     });
   }
 
   @override
   void initState() {
     super.initState();
-
     startTimer();
   }
 

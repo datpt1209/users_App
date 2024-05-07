@@ -169,7 +169,7 @@ class AssistantMethods
 {
   static Future<String> searchAddressForGeographicCoOrdinates(Position position, context) async
   {
-    String apiUrl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$mapkey";
+    String apiUrl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$mapKey";
     String humanReadableAddress="";
     var requestResponse = await RequestAssistant.receiveRequest(apiUrl);
 
@@ -190,18 +190,18 @@ class AssistantMethods
   static void readCurrentOnlineUserInfo_API() async
   {
     int? Id = currentUser_API?.id;
-    var response = await http.get(Uri.parse("http://4.144.131.165/account/api/v1/customer/${Id}"));
+    var response = await http.get(Uri.parse('http://209.38.168.38/account/api/v1/customer/${Id}'));
     if(response.statusCode == 200){
       currentUser_API_Info =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
       print("userModel_APICurrentInfo?::::::: ${currentUser_API_Info?.fullName}");
     }else{
-      return;
+      print(response.statusCode);
     }
   }
 
   static Future<DirectionDetailsInfo?> obtainOriginToDestinationDirectionDetails(LatLng origionPosition, LatLng destinationPosition) async
   {
-    String urlOriginToDestinationDirectionDetails = "https://maps.googleapis.com/maps/api/directions/json?origin=${origionPosition.latitude},${origionPosition.longitude}&destination=${destinationPosition.latitude},${destinationPosition.longitude}&key=$mapkey";
+    String urlOriginToDestinationDirectionDetails = "https://maps.googleapis.com/maps/api/directions/json?origin=${origionPosition.latitude},${origionPosition.longitude}&destination=${destinationPosition.latitude},${destinationPosition.longitude}&key=$mapKey";
 
     var responseDirectionApi = await RequestAssistant.receiveRequest(urlOriginToDestinationDirectionDetails);
 

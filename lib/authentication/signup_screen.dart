@@ -458,7 +458,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     };
     var body = json.encode(userMap);
     print("body:::: ${body}");
-    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/register'),
+    var response = await http.post(Uri.parse('http://209.38.168.38/account/api/v1/register'),
         headers: {"Content-Type": "application/json"},
         body: body
     );

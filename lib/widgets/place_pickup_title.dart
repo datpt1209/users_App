@@ -29,7 +29,7 @@ class _PlacePredictionPickUpDesignState extends State<PlacePredictionPickUpDesig
         message: "Setting Up Pick Up, Please wait...",
       ),
     );
-    String placeDirectionDetailsUrl = "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$mapkey";
+    String placeDirectionDetailsUrl = "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$mapKey";
 
     var responseApi = await RequestAssistant.receiveRequest(placeDirectionDetailsUrl);
 

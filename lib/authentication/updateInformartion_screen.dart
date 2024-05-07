@@ -172,7 +172,7 @@ class _UpdateInformationState extends State<UpdateInformation> {
     var body = json.encode(userMap);
 
     //Call API update information
-    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/customer/update'),
+    var response = await http.post(Uri.parse('http://209.38.168.38/account/api/v1/customer/update'),
         headers: {"Content-Type": "application/json"},
         body: body
     );

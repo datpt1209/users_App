@@ -7,6 +7,8 @@
         android:label="users_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -27,6 +29,11 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                <category android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -34,6 +41,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <meta-data android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyD3dIcoMTz50tddUrFqFDD0hrGPGG6RSnw"/>
+            android:value="AIzaSyC5nKn2X9S8tR0cmYKyiXeOUXut5jEif6E"/>
     </application>
 </manifest>

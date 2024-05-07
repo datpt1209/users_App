@@ -213,6 +213,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:users_app/authentication/signup_screen.dart';
 import 'package:users_app/mainScreens/main_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:users_app/splashScreen/splash_screen.dart';
 import '../global/global.dart';
 import '../models/user_api.dart';
 import '../widgets/progress_dialog.dart';
@@ -261,17 +262,16 @@ class _LoginScreenState extends State<LoginScreen>
       "type": "CUSTOMER"
     };
     var body = json.encode(userMap);
-    var response = await http.post(Uri.parse('http://4.144.131.165/account/api/v1/login'),
+    var response = await http.post(Uri.parse('http://209.38.168.38/account/api/v1/login'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
-
     if(response.statusCode == 200){
       currentUser_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
       print("UserID::::::: ${currentUser_API?.id}");
       print("UserPhone::::::: ${currentUser_API?.mobilePhone}");
       Fluttertoast.showToast(msg: "Login Successfully with CustomerID: ${currentUser_API?.id}");
-      Navigator.push(context, MaterialPageRoute(builder: (c)=>MainScreen()));
+      Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
 
     }else{
       Navigator.pop(context);

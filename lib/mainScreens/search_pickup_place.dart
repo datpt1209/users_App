@@ -18,7 +18,7 @@ class _Search_pickup_placeState extends State<Search_pickup_place> {
   {
     if(inputText.length > 1) //2 or more than 2 input characters
         {
-      String urlAutoCompleteSearch = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$inputText&key=$mapkey&components=country:VNM";
+      String urlAutoCompleteSearch = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$inputText&key=$mapKey&components=country:VNM";
       var responseAutoCompleteSearch = await RequestAssistant.receiveRequest(urlAutoCompleteSearch);
 
       if(responseAutoCompleteSearch == "Error Occurred, Failed. No Response.")
@@ -66,7 +66,6 @@ class _Search_pickup_placeState extends State<Search_pickup_place> {
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 children: [
-
                   const SizedBox(height: 25.0),
 
                   Stack(
@@ -84,7 +83,7 @@ class _Search_pickup_placeState extends State<Search_pickup_place> {
 
                       const Center(
                         child: Text(
-                          "Search & Set DropOff Location",
+                          "Search & Set PickUP Location",
                           style: TextStyle(
                             fontSize: 18.0,
                             color: Colors.grey,
