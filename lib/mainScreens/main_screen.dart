@@ -1232,6 +1232,7 @@ import 'package:users_app/mainScreens/search_pickup_place.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
 import 'package:users_app/models/car_type.dart';
+import 'package:users_app/models/user_api.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
 import '../assistants/geofire_assistant.dart';
@@ -1252,13 +1253,13 @@ class _MainScreenState extends State<MainScreen>
 {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newGoogleMapController;
+  late Future<List<CarType>> carTypeList;
   CarType? selectedCarType;
+
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
-  List<CarType> carTypeList = [];
-
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
   double searchLocationContainerHeight = 320;
@@ -1478,6 +1479,12 @@ class _MainScreenState extends State<MainScreen>
     }
   }
 
+  Future<List<CarType>> getCarTypeList() async {
+    final response = await http.get(Uri.parse("http://209.38.168.38/vehicle/vehicle-types"));
+    final carTypeList = carTypeFromJson(response.body);
+    return carTypeList;
+  }
+
 
   void dropdownCarType(CarType? selectedValue){
     if(selectedValue is CarType){
@@ -1492,6 +1499,12 @@ class _MainScreenState extends State<MainScreen>
         selectedPaymentMethod = selectedValue;
       });
     }
+  }
+
+  Future<UserModel_API?> readCurrentUserInformation1() async {
+    final response = await http.get(Uri.parse("http://209.38.168.38/account/api/v1/customer/${currentUser_API?.id}"));
+    currentUser_API_Info = UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String,dynamic>);
+    return currentUser_API_Info;
   }
 
   locateUserPosition() async
@@ -1557,13 +1570,13 @@ class _MainScreenState extends State<MainScreen>
       "request_time": DateTime.now().toString(),
       "request_type": "ORDINARY",
       "requester":requester,
-      "vehicle_type":selectedCarType?.id.toString(),
+      "vehicle_type":selectedCarType!.id,
     };
 
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('http://4.144.131.165/trip/api/v1/book/customer'),
+    var response = await http.post(Uri.parse('http://209.38.168.38/trip/customer/estimate/customer'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
@@ -1574,7 +1587,7 @@ class _MainScreenState extends State<MainScreen>
      print("This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
       showWaitingResponseFromDriverUI();
     }else{
-      Fluttertoast.showToast(msg: "Error Occurred during Estimate Fare");
+      Fluttertoast.showToast(msg: "Error Occurred during Booking");
       throw Exception('Failed to call Driver');
     }
 
@@ -1624,30 +1637,31 @@ class _MainScreenState extends State<MainScreen>
     {
       //"key": value
       "address": destinationLocation!.locationName.toString(),
-      "coordinate": [destinationLocation.locationLatitude,destinationLocation.locationLongitude]
+      "coordinate": [destinationLocation.locationLongitude,destinationLocation.locationLatitude]
     };
 
     Map pickup =
     {
       //"key": value
       "address": originLocation!.locationName.toString(),
-      "coordinate": [originLocation.locationLatitude,originLocation.locationLongitude],
+      "coordinate": [originLocation.locationLongitude,originLocation.locationLatitude],
     };
 
     Map rideRequest =
     {
+      "additional_services":[],
       "customer": customer,
       "destination": destination,
       "distance": tripDirectionDetailsInfo!.distance_value! / 1000,
       "pickup": pickup,
       "request_type": "ORDINARY",
-      "vehicle_type":selectedCarType?.id.toString(),
+      "vehicle_type":selectedCarType!.id,
 
     };
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('http://4.144.131.165/trip/api/v1/estimate/customer'),
+    var response = await http.post(Uri.parse('http://209.38.168.38/trip/customer/estimate/customer'),
         headers: {"Content-Type": "application/json"},
         body: body
     );
@@ -1664,16 +1678,6 @@ class _MainScreenState extends State<MainScreen>
       Fluttertoast.showToast(msg: "Error Occurred during Estimate FARE");
       throw Exception('Failed to Estimate FARE');
     }
-  }
-
-  getCarType() async
-  {
-    var getCarTypeUrl = "https://refactored-goldfish-wgvwrr4wqjf5p74-8080.app.github.dev/api/v1/vehicle-types/";
-
-    String jsonString = '[{"id": 1, "name": "4 cho", "capacity": 1, "is_deleted": "false"},'
-        '{"id": 2, "name": "7 cho","capacity": 1, "is_deleted": "false"}]';
-
-    carTypeList = carTypeFromJson(jsonString);
   }
 
   updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async
@@ -1887,13 +1891,15 @@ class _MainScreenState extends State<MainScreen>
 
 
   @override
-  void  initState()
+  void initState()
   {
     super.initState();
     checkIfPermissionAllowed();
-    AssistantMethods.readCurrentOnlineUserInfo_API();
-    getCarType();
+    readCurrentUserInformation1();
+    //AssistantMethods.readCurrentOnlineUserInfo_API();
+    //getCarType();
     readCurrentDriverInformation();
+    carTypeList = getCarTypeList();
   }
 
   @override
@@ -1993,31 +1999,46 @@ class _MainScreenState extends State<MainScreen>
                       //select CarType
                       Row(
                         children: [
-                          DropdownButton(iconSize: 20,
-                              dropdownColor: Colors.transparent,
-                              hint: const Text(
-                                "Please choose Car Type",
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey
-                                ),
-                              ),
-                              value: selectedCarType,
-                              items: carTypeList.map((carType){
-                                return DropdownMenuItem(
-                                  child:Text(
-                                    carType.name,
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                  value:carType,
-                                );
-                              }).toList(),
-                              onChanged: (val){
-                                setState(() {
-                                  selectedCarType = val as CarType?;
-                                  print("selectcar:::::::::${selectedCarType}");
-                                });
-                              })
+                          FutureBuilder<List<CarType>>(
+                              future: carTypeList,
+                              builder: (context,snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                }
+                                else if (snapshot.hasError) {
+                                  return const Text('Error loading data');
+                                }
+                                else if (!snapshot.hasData) {
+                                  return const Text('No data available');
+                                }
+                                else {
+                                  final carTypeList = snapshot.data!;
+                                  return DropdownButton(iconSize: 20,
+                                      dropdownColor: Colors.transparent,
+                                      hint: const Text(
+                                        "Please choose Car Type",
+                                        style: TextStyle(
+
+                                            color: Colors.grey
+                                        ),
+                                      ),
+                                      value: selectedCarType,
+                                      items: carTypeList.map((carType) {
+                                        return DropdownMenuItem(
+                                          child: Text(
+                                            carType.name,
+                                            style: const TextStyle(color: Colors.grey),
+                                          ),
+                                          value: carType,
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        setState(() {
+                                          selectedCarType = val;
+                                        });
+                                      });
+                                }
+                              }),
                         ],
                       ),
                       const Divider(

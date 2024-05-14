@@ -35,8 +35,8 @@ class UserModel_API
       'userId': int id,
       'mobilePhone': String mobilePhone,
       'fullName': String fullName,
-      'address': String address,
-      'picture':String picture
+      'picture':String picture,
+      'address': String address
       } =>
           UserModel_API(
             id: id,
