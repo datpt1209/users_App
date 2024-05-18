@@ -208,8 +208,10 @@ class _LoginScreenState extends State<LoginScreen>
 */
 
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import 'package:users_app/authentication/signup_screen.dart';
 import 'package:users_app/mainScreens/main_screen.dart';
 import 'package:http/http.dart' as http;
@@ -270,13 +272,49 @@ class _LoginScreenState extends State<LoginScreen>
       currentUser_API = await UserModel_API.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
       print("UserID::::::: ${currentUser_API?.id}");
       print("UserPhone::::::: ${currentUser_API?.mobilePhone}");
-      Fluttertoast.showToast(msg: "Login Successfully with CustomerID: ${currentUser_API?.id}");
-      Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
-
+      var check_getToken = await getToken();
+      if(check_getToken == false)
+      {
+        Fluttertoast.showToast(msg: "Error Occurred during Login");
+        throw Exception('Failed to login with Driver');
+      }
+      else{
+        Fluttertoast.showToast(msg: "Login Successfully with CustomerID: ${currentUser_API?.id}");
+        Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+      }
     }else{
       Navigator.pop(context);
       Fluttertoast.showToast(msg: "Error Occurred during Login");
-      throw Exception('Failed to login with Customer');
+      throw Exception('Failed to login with Driver');
+    }
+  }
+
+  getToken() async{
+    bool getToken = false;
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    String? registrationToken = await messaging.getToken();
+    print("FCM Registration Token::::  $registrationToken");
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(now.toUtc());
+    Map userMap =
+    {
+      "driverId": currentUser_API?.id,
+      "token": registrationToken,
+      "timestamp": formattedDate
+    };
+    var body = json.encode(userMap);
+    var response = await http.post(Uri.parse('http://209.38.168.38/notify/api/v1/registration-token'),
+        headers: {"Content-Type": "application/json"},
+        body: body
+    );
+    print(body);
+    if(response.statusCode == 200){
+      getToken = true;
+      Fluttertoast.showToast(msg: "Get token successful: ${registrationToken}");
+      return getToken;
+    }
+    else{
+      return getToken;
     }
   }
 
