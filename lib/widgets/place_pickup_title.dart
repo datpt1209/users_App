@@ -4,11 +4,9 @@ import 'package:users_app/global/global.dart';
 import 'package:users_app/global/map_key_dart.dart';
 import 'package:users_app/models/predicted_places.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
-
 import '../assistants/request_assistant.dart';
 import '../infoHandler/app_info.dart';
 import '../models/directions.dart';
-
 
 class PlacePredictionPickUpDesign extends StatefulWidget
 {

@@ -1,21 +1,21 @@
 import 'dart:convert';
 
-class CarType {
+class VehicleType {
   final String id;
   final String name;
   final int capacity;
   final double pricePerKm;
 
-  const CarType({
+  const VehicleType({
     required this.id,
     required this.name,
     required this.capacity,
     required this.pricePerKm
   });
 
-  factory CarType.fromJson(Map<String, dynamic> json){
+  factory VehicleType.fromJson(Map<String, dynamic> json){
 
-    return CarType(
+    return VehicleType(
         id: json['_id'].toString(),
         name: json['name'].toString(),
         capacity: json['capacity'],
@@ -32,12 +32,13 @@ class CarType {
       };
 }
 
-List<CarType> carTypeFromJson(String str) {
+List<VehicleType> carTypeFromJson(String str) {
   final jsonData = json.decode(str);
-  return List<CarType>.from(jsonData.map((x) => CarType.fromJson(x)));
+  return List<VehicleType>.from(jsonData.map((x) => VehicleType.fromJson(x)));
 }
 
-String carTypeToJson(List<CarType> data) {
+String carTypeToJson(List<VehicleType> data) {
   final List dyn = List<dynamic>.from(data.map((x) => x.toJson()));
   return json.encode(dyn);
 }
+

@@ -1,8 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:users_app/models/driver.dart';
+import 'package:users_app/models/message.dart';
 import 'package:users_app/models/user_api.dart';
 import 'package:users_app/models/user_model.dart';
-
+import 'package:users_app/models/vehicle.dart';
 import '../models/direction_details_info.dart';
+import '../models/trip.dart';
 
 final FirebaseAuth fAuth = FirebaseAuth.instance;
 User? currentFirebaseUser;
@@ -11,6 +14,10 @@ UserModel_API? currentUser_API;
 UserModel_API? currentUser_API_Info;
 List dList = [];//driverKeys Info List
 
+Message? message;
+Driver? currentDriver;
+Trip? currentTrip;
+Vehicle? currentVehicle;
 DirectionDetailsInfo? tripDirectionDetailsInfo;
 
 String? chosenDriverId = "";

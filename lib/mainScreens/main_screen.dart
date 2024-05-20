@@ -15,7 +15,7 @@ import 'package:users_app/assistants/assistant_methods.dart';
 import 'package:users_app/global/global.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
-import 'package:users_app/models/car_type.dart';
+import 'package:users_app/models/vehicle_type.dart';
 import 'package:users_app/models/direction_details_info.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
@@ -1232,7 +1232,7 @@ import 'package:users_app/global/global.dart';
 import 'package:users_app/mainScreens/search_pickup_place.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
-import 'package:users_app/models/car_type.dart';
+import 'package:users_app/models/vehicle_type.dart';
 import 'package:users_app/models/user_api.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
@@ -1241,6 +1241,7 @@ import '../infoHandler/app_info.dart';
 import '../models/active_nearby_available_drivers.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/trip.dart';
 import '../push_notifications/push_notification_system.dart';
 
 
@@ -1252,10 +1253,11 @@ class MainScreen extends StatefulWidget
 
 class MainScreenState extends State<MainScreen>
 {
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newGoogleMapController;
-  late Future<List<CarType>> carTypeList;
-  CarType? selectedCarType;
+  late Future<List<VehicleType>> carTypeList;
+  VehicleType? selectedCarType;
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
@@ -1263,8 +1265,8 @@ class MainScreenState extends State<MainScreen>
   );
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
-  double searchLocationContainerHeight = 320;
-  double waitingResponseFromDriverUIContainerHeight = 0;
+  double searchLocationContainerHeight= 320;
+  double waitingResponseFromDriverUIContainerHeight =0;
   double assignedDriverContainerHeight = 0;
   int? tripFare;
 
@@ -1480,66 +1482,74 @@ class MainScreenState extends State<MainScreen>
     }
   }
 
-  readUserRideRequestInformation(RemoteMessage remoteMessage, BuildContext context)
+  Future initializeCloudMessaging() async
+  {
+    //1. Terminated
+    //When the app is completely closed and opened directly from the push notification
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? remoteMessage)
+    {
+      if(remoteMessage != null)
+      {
+        //display ride request information - user information who request a ride
+        print("This is Ride request::::::");
+        print(remoteMessage!.data.toString());
+
+        readUserRideRequestInformation(remoteMessage);
+      }
+    });
+    //2. Foreground
+    //when the app is open and it receives a push notification
+    FirebaseMessaging.onMessage.listen((RemoteMessage? remoteMessage)
+    {
+      //display ride request information - user information who request a ride
+      print("This is Ride request::::::");
+      print(remoteMessage!.data.toString());
+      readUserRideRequestInformation(remoteMessage);
+    });
+
+    //3.Background
+    //when the app is in the background and opened directly from the push notification.
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? remoteMessage)
+    {
+      //display ride request information - user information who request a ride
+      print("This is Ride request::::::");
+      print(remoteMessage!.data.toString());
+      readUserRideRequestInformation(remoteMessage);
+    });
+  }
+
+  readUserRideRequestInformation(RemoteMessage remoteMessage)
   {
     var jsonString = remoteMessage.data['data'].toString();
     final Map<String, dynamic> parsed = json.decode(jsonString);
-    var trip = Trip.fromJson(parsed);
+    currentTrip = Trip.fromJson(parsed);
 
-    if(trip.code == "trip.Picking")
+    if(currentTrip!.code == "trip.Picking")
     {
-      var message = trip.messageObject!;
-      print("Driver Information::::::::::${message.driver.name} - ${message.driver.phone}");
+      message = currentTrip!.messageObject!;
+      driverName = message!.driver.name;
+      driverCarDetails = "${message!.vehicle.make} - ${message!.vehicle.model} - ${message!.vehicle.vehicleNumber}";
+      driverPhone = message!.driver.phone;
+      print("Driver Information::::::::::${message!.driver.name} - ${message!.driver.phone}");
       // double originLong = double.parse(origination['longitude']);
       showUIForAssignedDriverInfo();
-
     }
     else
     {
-      var message = trip.message!;
+      var message = currentTrip!.message!;
       print("This is Message:::::::::${message}");
-      Fluttertoast.showToast(msg: "The driver has cancel your request. Please choose another driver.");
       // double originLong = double.parse(origination['longitude']);
     }
-
-
-    // var originAddress = remoteMessage.data['pickingAddress'].toString();
-    // var origination =jsonDecode(remoteMessage.data["origin"].toString());
-    // double originLat = double.parse(origination['latitude']);
-    // double originLong = double.parse(origination['longitude']);
-    //
-    // var destinationAddress = remoteMessage.data['destinationAddress'].toString();
-    // var destination =jsonDecode(remoteMessage.data["destination"].toString());
-    // double destinationLat = double.parse(destination['latitude']);
-    // double destinationLong = double.parse(destination['longitude']);
-    //
-    // UserRideRequestInformation userRideRequestDetails = UserRideRequestInformation();
-    // userRideRequestDetails.originLatLng = LatLng(originLat, originLong);
-    // userRideRequestDetails.originAddress = originAddress;
-    // userRideRequestDetails.destinationAddress = destinationAddress;
-    // userRideRequestDetails.destinationLaLng = LatLng(destinationLat, destinationLong);
-    //
-    // print("this is latitude::::::::::${originAddress}");
-
-    // showDialog(
-    //     context: context,
-    //     builder: (BuildContext context) => NotificationDialogBox(
-    //       userRideRequestDetails: userRideRequestDetails,
-    //     ),
-    // );
   }
 
-
-
-  Future<List<CarType>> getCarTypeList() async {
+  Future<List<VehicleType>> getCarTypeList() async {
     final response = await http.get(Uri.parse("http://209.38.168.38/vehicle/vehicle-types"));
     final carTypeList = carTypeFromJson(response.body);
     return carTypeList;
   }
 
-
-  void dropdownCarType(CarType? selectedValue){
-    if(selectedValue is CarType){
+  void dropdownCarType(VehicleType? selectedValue){
+    if(selectedValue is VehicleType){
       setState(() {
         selectedCarType = selectedValue;
       });
@@ -1638,7 +1648,7 @@ class MainScreenState extends State<MainScreen>
     if(response.statusCode == 201){
       var responseDecode = jsonDecode(response.body);
      print("This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
-     showWaitingResponseFromDriverUI();
+
     }else{
       Fluttertoast.showToast(msg: "Error Occurred during Booking");
       throw Exception('Failed to call Driver');
@@ -1853,7 +1863,6 @@ class MainScreenState extends State<MainScreen>
             {
               //Design and display UI driver information
               showUIForAssignedDriverInfo();
-
             }
           });
         }
@@ -1934,6 +1943,14 @@ class MainScreenState extends State<MainScreen>
       });
     }
   }
+  Future generateAndGetToken() async
+  {
+    String? registrationToken = await messaging.getToken();
+    print("FCM Registration Token: ");
+    print(registrationToken);
+    messaging.subscribeToTopic("allDrivers");
+    messaging.subscribeToTopic("allUsers");
+  }
 
   readCurrentCustomerInformation() async
   {
@@ -1942,16 +1959,15 @@ class MainScreenState extends State<MainScreen>
     pushNotificationSystem.generateAndGetToken();
   }
 
-
   @override
   void initState()
   {
     super.initState();
     checkIfPermissionAllowed();
     readCurrentUserInformation1();
+    initializeCloudMessaging();
+    generateAndGetToken();
     //AssistantMethods.readCurrentOnlineUserInfo_API();
-    //getCarType();
-    readCurrentCustomerInformation();
     carTypeList = getCarTypeList();
   }
 
@@ -2052,7 +2068,7 @@ class MainScreenState extends State<MainScreen>
                       //select CarType
                       Row(
                         children: [
-                          FutureBuilder<List<CarType>>(
+                          FutureBuilder<List<VehicleType>>(
                               future: carTypeList,
                               builder: (context,snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -2262,6 +2278,7 @@ class MainScreenState extends State<MainScreen>
                           if(Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null)
                           {
                             saveRideRequestInformation();
+                            showWaitingResponseFromDriverUI();
                           }
                           else
                           {
@@ -2341,11 +2358,11 @@ class MainScreenState extends State<MainScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     //status of ride
-                    Center(
+                    const Center(
                       child: Text(
-                        driverRideStatus,
+                        "Driver is Coming",
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white54,
