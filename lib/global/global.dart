@@ -29,3 +29,4 @@ String userPickUpAddress = "";
 String driverCarDetails = "";
 String driverName = "";
 String driverPhone = "";
+String messageString = "";

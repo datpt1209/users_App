@@ -1268,6 +1268,7 @@ class MainScreenState extends State<MainScreen>
   double searchLocationContainerHeight= 320;
   double waitingResponseFromDriverUIContainerHeight =0;
   double assignedDriverContainerHeight = 0;
+  double waitingShowMessageUIContainerHeight = 0;
   int? tripFare;
 
   String? idTrip;
@@ -1493,7 +1494,6 @@ class MainScreenState extends State<MainScreen>
         //display ride request information - user information who request a ride
         print("This is Ride request::::::");
         print(remoteMessage!.data.toString());
-
         readUserRideRequestInformation(remoteMessage);
       }
     });
@@ -1522,11 +1522,11 @@ class MainScreenState extends State<MainScreen>
   {
     var jsonString = remoteMessage.data['data'].toString();
     final Map<String, dynamic> parsed = json.decode(jsonString);
-    currentTrip = Trip.fromJson(parsed);
+    var currentTrip = Trip.fromJson(parsed);
 
     if(currentTrip!.code == "trip.Picking")
     {
-      message = currentTrip!.messageObject!;
+      var message = currentTrip!.messageObject!;
       driverName = message!.driver.name;
       driverCarDetails = "${message!.vehicle.make} - ${message!.vehicle.model} - ${message!.vehicle.vehicleNumber}";
       driverPhone = message!.driver.phone;
@@ -1536,9 +1536,9 @@ class MainScreenState extends State<MainScreen>
     }
     else
     {
-      var message = currentTrip!.message!;
-      print("This is Message:::::::::${message}");
-      // double originLong = double.parse(origination['longitude']);
+      messageString = currentTrip!.message!;
+      print("This is Message:::::::::${messageString}");
+      showMessageResponseFromDriverUI();
     }
   }
 
@@ -1880,6 +1880,7 @@ class MainScreenState extends State<MainScreen>
       searchLocationContainerHeight = 0;
       waitingResponseFromDriverUIContainerHeight = 0;
       assignedDriverContainerHeight = 250;
+      waitingShowMessageUIContainerHeight= 0;
     });
   }
 
@@ -1888,6 +1889,17 @@ class MainScreenState extends State<MainScreen>
     setState(() {
       searchLocationContainerHeight = 0;
       waitingResponseFromDriverUIContainerHeight = 240;
+      assignedDriverContainerHeight = 0;
+      waitingShowMessageUIContainerHeight= 0;
+    });
+  }
+  showMessageResponseFromDriverUI()
+  {
+    setState(() {
+      searchLocationContainerHeight = 0;
+      waitingResponseFromDriverUIContainerHeight = 0;
+      assignedDriverContainerHeight = 0;
+      waitingShowMessageUIContainerHeight= 240;
     });
   }
 
@@ -2441,6 +2453,47 @@ class MainScreenState extends State<MainScreen>
               ),
             ),
           ),
+
+          //UI show message
+          Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: waitingShowMessageUIContainerHeight,
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    topLeft: Radius.circular(20),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Center(
+                    // child: AnimatedTextKit(
+                    //   animatedTexts: [
+                    //     FadeAnimatedText(
+                    //       messageString.toString(),
+                    //       duration: const Duration(seconds: 6),
+                    //       textAlign: TextAlign.center,
+                    //       textStyle: const TextStyle(fontSize: 30.0, color:Colors.white, fontWeight: FontWeight.bold),
+                    //     ),
+                    //     ScaleAnimatedText(
+                    //       messageString.toString(),
+                    //       duration: const Duration(seconds: 10),
+                    //       textAlign: TextAlign.center,
+                    //       textStyle: const TextStyle(fontSize: 32.0, color:Colors.white, fontFamily: 'Canterbury'),
+                    //     ),
+                    //   ],
+                    // ),
+                    child: Text(
+                      messageString.toString(),
+                      style: const TextStyle(fontSize: 32.0, color:Colors.white, fontFamily: 'Canterbury'),
+                    )
+                  ),
+                ),
+              )),
         ],
       ),
     );
