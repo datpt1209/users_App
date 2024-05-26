@@ -153,6 +153,7 @@ class AssistantMethods
 }*/
 
 import 'dart:convert';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -161,6 +162,7 @@ import 'package:users_app/assistants/request_assistant.dart';
 import 'package:users_app/global/global.dart';
 import 'package:users_app/global/map_key_dart.dart';
 import 'package:users_app/infoHandler/app_info.dart';
+import 'package:users_app/models/additional_service.dart';
 import 'package:users_app/models/directions.dart';
 import '../models/direction_details_info.dart';
 import '../models/user_api.dart';
@@ -187,15 +189,28 @@ class AssistantMethods
     return humanReadableAddress;
   }
 
-  static void readCurrentOnlineUserInfo_API() async
+  Future<void> readAdditionalServices() async
   {
-    int? Id = currentUser_API?.id;
-    var response = await http.get(Uri.parse('http://209.38.168.38/account/api/v1/customer/${Id}'));
+    var response = await http.get(Uri.parse('http://209.38.168.38/trip/additional-services/get/all'));
+    print("Additional Service::::::::${response.body}");
+    if(response.statusCode == 200){
+      additionalServices =  additionalServicesFromJson(response.body);
+    }else{
+      Fluttertoast.showToast(msg: "Error Occurred during Read additional Services");
+      throw Exception('Failed to Read Read additional Services');
+    }
+  }
+
+  Future<void> readCurrentOnlineUserInfo_API() async
+  {
+    int id = currentUser_API?.id as int;
+    var response = await http.get(Uri.parse('http://209.38.168.38/account/api/v1/customer/${id}'));
     if(response.statusCode == 200){
       currentUser_API_Info =  UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String, dynamic>);
       print("userModel_APICurrentInfo?::::::: ${currentUser_API_Info?.fullName}");
     }else{
-      print(response.statusCode);
+      Fluttertoast.showToast(msg: "Error Occurred during Read Current information");
+      throw Exception('Failed to Read current information');
     }
   }
 

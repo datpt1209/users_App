@@ -185,8 +185,6 @@ class PushNotificationSystem
       var message = currentTrip!.messageObject!;
       print("Driver Information::::::::::${message.driver.name} - ${message.driver.phone}");
       // double originLong = double.parse(origination['longitude']);
-      Provider.of<AppInfo>(context, listen: false).updateWaitingLocation(0);
-      Provider.of<AppInfo>(context, listen: false).updateSearchLocation(320);
     }
     else
     {
@@ -194,31 +192,6 @@ class PushNotificationSystem
       print("This is Message:::::::::${message}");
       // double originLong = double.parse(origination['longitude']);
     }
-
-    // var originAddress = remoteMessage.data['pickingAddress'].toString();
-    // var origination =jsonDecode(remoteMessage.data["origin"].toString());
-    // double originLat = double.parse(origination['latitude']);
-    // double originLong = double.parse(origination['longitude']);
-    //
-    // var destinationAddress = remoteMessage.data['destinationAddress'].toString();
-    // var destination =jsonDecode(remoteMessage.data["destination"].toString());
-    // double destinationLat = double.parse(destination['latitude']);
-    // double destinationLong = double.parse(destination['longitude']);
-    //
-    // UserRideRequestInformation userRideRequestDetails = UserRideRequestInformation();
-    // userRideRequestDetails.originLatLng = LatLng(originLat, originLong);
-    // userRideRequestDetails.originAddress = originAddress;
-    // userRideRequestDetails.destinationAddress = destinationAddress;
-    // userRideRequestDetails.destinationLaLng = LatLng(destinationLat, destinationLong);
-    //
-    // print("this is latitude::::::::::${originAddress}");
-
-    // showDialog(
-    //     context: context,
-    //     builder: (BuildContext context) => NotificationDialogBox(
-    //       userRideRequestDetails: userRideRequestDetails,
-    //     ),
-    // );
   }
 }
 

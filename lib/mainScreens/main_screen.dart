@@ -1213,12 +1213,12 @@ class _MainScreenState extends State<MainScreen>
 }
 */
 
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_geofire/flutter_geofire.dart';
@@ -1226,14 +1226,16 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:users_app/assistants/assistant_methods.dart';
+import 'package:users_app/assistants/notificationCancelTrip.dart';
 import 'package:users_app/global/global.dart';
 import 'package:users_app/mainScreens/search_pickup_place.dart';
 import 'package:users_app/mainScreens/search_places_screen.dart';
 import 'package:users_app/mainScreens/select_nearest_active_driver_screen.dart';
+import 'package:users_app/models/additional_service.dart';
 import 'package:users_app/models/vehicle_type.dart';
-import 'package:users_app/models/user_api.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
 import '../assistants/geofire_assistant.dart';
@@ -1243,16 +1245,15 @@ import 'package:http/http.dart' as http;
 
 import '../models/trip.dart';
 import '../push_notifications/push_notification_system.dart';
+import '../splashScreen/splash_screen.dart';
+import 'notification_gettingPayment.dart';
 
-
-class MainScreen extends StatefulWidget
-{
+class MainScreen extends StatefulWidget {
   @override
   State<MainScreen> createState() => MainScreenState();
 }
 
-class MainScreenState extends State<MainScreen>
-{
+class MainScreenState extends State<MainScreen> {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newGoogleMapController;
@@ -1265,10 +1266,10 @@ class MainScreenState extends State<MainScreen>
   );
   GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
-  double searchLocationContainerHeight= 320;
-  double waitingResponseFromDriverUIContainerHeight =0;
+  double searchLocationContainerHeight = 350;
+  double waitingResponseFromDriverUIContainerHeight = 0;
   double assignedDriverContainerHeight = 0;
-  double waitingShowMessageUIContainerHeight = 0;
+  double tripArrivedUIContainerHeight = 0;
   int? tripFare;
 
   String? idTrip;
@@ -1283,15 +1284,14 @@ class MainScreenState extends State<MainScreen>
 
   List<LatLng> pLineCoOrdinatesList = [];
   Set<Polyline> polyLineSet = {};
-
   Set<Marker> markersSet = {};
   Set<Circle> circlesSet = {};
 
   String userName = "your Name";
-  String userEmail= "Your Email";
+  String userEmail = "Your Email";
 
   bool openNavigationDrawer = true;
-
+  bool cancleTripVisibility = true;
   bool activeNearbyDriverKeysLoaded = false;
 
   BitmapDescriptor? activeNearbyIcon;
@@ -1300,14 +1300,14 @@ class MainScreenState extends State<MainScreen>
 
   DatabaseReference? referenceRideRequest;
 
-  String driverRideStatus = "Driver is Coming";
+  String driverRideStatus = "Search Driver Successfully";
   StreamSubscription<DatabaseEvent>? tripRideRequestInfoStreamSubscription;
   String userRideRequestStatus = "";
   bool requestPositionInfo = true;
   String? selectedPaymentMethod;
+  String? selectedAdditionalService;
 
-  blackThemegoogleMap()
-  {
+  blackThemegoogleMap() {
     newGoogleMapController!.setMapStyle('''
                     [
                       {
@@ -1473,34 +1473,30 @@ class MainScreenState extends State<MainScreen>
                 ''');
   }
 
-  checkIfPermissionAllowed() async
-  {
+  checkIfPermissionAllowed() async {
     _locationPermission = await Geolocator.requestPermission();
 
-    if(_locationPermission == LocationPermission.denied)
-    {
+    if (_locationPermission == LocationPermission.denied) {
       _locationPermission = await Geolocator.requestPermission();
     }
   }
 
-  Future initializeCloudMessaging() async
-  {
+  Future initializeCloudMessaging() async {
     //1. Terminated
     //When the app is completely closed and opened directly from the push notification
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? remoteMessage)
-    {
-      if(remoteMessage != null)
-      {
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? remoteMessage) {
+      if (remoteMessage != null) {
         //display ride request information - user information who request a ride
         print("This is Ride request::::::");
-        print(remoteMessage!.data.toString());
+        print(remoteMessage.data.toString());
         readUserRideRequestInformation(remoteMessage);
       }
     });
     //2. Foreground
     //when the app is open and it receives a push notification
-    FirebaseMessaging.onMessage.listen((RemoteMessage? remoteMessage)
-    {
+    FirebaseMessaging.onMessage.listen((RemoteMessage? remoteMessage) {
       //display ride request information - user information who request a ride
       print("This is Ride request::::::");
       print(remoteMessage!.data.toString());
@@ -1509,8 +1505,7 @@ class MainScreenState extends State<MainScreen>
 
     //3.Background
     //when the app is in the background and opened directly from the push notification.
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? remoteMessage)
-    {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? remoteMessage) {
       //display ride request information - user information who request a ride
       print("This is Ride request::::::");
       print(remoteMessage!.data.toString());
@@ -1518,102 +1513,133 @@ class MainScreenState extends State<MainScreen>
     });
   }
 
-  readUserRideRequestInformation(RemoteMessage remoteMessage)
-  {
+  readUserRideRequestInformation(RemoteMessage remoteMessage) {
     var jsonString = remoteMessage.data['data'].toString();
     final Map<String, dynamic> parsed = json.decode(jsonString);
     var currentTrip = Trip.fromJson(parsed);
 
-    if(currentTrip!.code == "trip.Picking")
-    {
-      var message = currentTrip!.messageObject!;
-      driverName = message!.driver.name;
-      driverCarDetails = "${message!.vehicle.make} - ${message!.vehicle.model} - ${message!.vehicle.vehicleNumber}";
-      driverPhone = message!.driver.phone;
-      print("Driver Information::::::::::${message!.driver.name} - ${message!.driver.phone}");
+    if (currentTrip.code == "trip.Picking") {
+      var message = currentTrip.messageObject!;
+      driverName = message.driver.name;
+      driverCarDetails =
+          "${message.vehicle.make} - ${message.vehicle.model} - ${message.vehicle.vehicleNumber}";
+      driverPhone = message.driver.phone;
+      print(
+          "Driver Information::::::::::${message.driver.name} - ${message.driver.phone}");
       // double originLong = double.parse(origination['longitude']);
       showUIForAssignedDriverInfo();
-    }
-    else
-    {
-      messageString = currentTrip!.message!;
+    } else if (currentTrip.code == "trip.End") {
+      messageString = currentTrip.message!;
       print("This is Message:::::::::${messageString}");
       showMessageResponseFromDriverUI();
+    }else if(currentTrip.code == "trip.GettingPayment" || currentTrip.code == "trip.Done")
+    {
+      messageString = currentTrip.message!;
+      print("this is message:::::::: ${message}");
+      // showDialog(
+      //   context: context,
+      //   builder: (BuildContext context) => NotificationConfirmPayment(
+      //       message: message.toString(), code: currentTrip.code
+      //   ),
+      // );
+      showTripArrivedResponseFromDriverUI();
+    }
+
+    else {
+      if(currentTrip.code == "trip.Processing")
+      {
+        cancleTripVisibility = false;
+      }else
+      {
+        cancleTripVisibility = true;
+      }
+      messageString = currentTrip.message!;
+      showUIForAssignedDriverInfo();
     }
   }
 
   Future<List<VehicleType>> getCarTypeList() async {
-    final response = await http.get(Uri.parse("http://209.38.168.38/vehicle/vehicle-types"));
+    final response =
+        await http.get(Uri.parse("http://209.38.168.38/vehicle/vehicle-types"));
     final carTypeList = carTypeFromJson(response.body);
     return carTypeList;
   }
 
-  void dropdownCarType(VehicleType? selectedValue){
-    if(selectedValue is VehicleType){
+  Future<void> getAdditionalServices() async {
+    await AssistantMethods().readAdditionalServices();
+  }
+
+  void dropdownCarType(VehicleType? selectedValue) {
+    if (selectedValue is VehicleType) {
       setState(() {
         selectedCarType = selectedValue;
       });
     }
   }
-  void dropdownPaymentMethod(String? selectedValue){
-    if(selectedValue is String){
+
+  void dropdownPaymentMethod(String? selectedValue) {
+    if (selectedValue is String) {
       setState(() {
         selectedPaymentMethod = selectedValue;
       });
     }
   }
 
-  Future<UserModel_API?> readCurrentUserInformation1() async {
-    final response = await http.get(Uri.parse("http://209.38.168.38/account/api/v1/customer/${currentUser_API?.id}"));
-    currentUser_API_Info = UserModel_API.fromJsonInfo(jsonDecode(response.body) as Map<String,dynamic>);
-    return currentUser_API_Info;
+  Future<void> readCurrentUserInformation1() async {
+    await AssistantMethods().readCurrentOnlineUserInfo_API();
   }
 
-  locateUserPosition() async
-  {
-    Position cPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  locateUserPosition() async {
+    Position cPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
     userCurrentPosition = cPosition;
-    LatLng latLngPosition = LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
-    CameraPosition cameraPosition = CameraPosition(target: latLngPosition, zoom: 14);
-    newGoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-    String humanReadableAddress = await AssistantMethods.searchAddressForGeographicCoOrdinates(userCurrentPosition!, context);
+    LatLng latLngPosition =
+        LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
+    CameraPosition cameraPosition =
+        CameraPosition(target: latLngPosition, zoom: 14);
+    newGoogleMapController!
+        .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    String humanReadableAddress =
+        await AssistantMethods.searchAddressForGeographicCoOrdinates(
+            userCurrentPosition!, context);
     print("this is your address " + humanReadableAddress);
     userName = currentUser_API_Info!.fullName!;
-    userEmail = currentUser_API_Info!.mobilePhone!;
-
     initializeGeoFireListener();
   }
 
-  saveRideRequestInformation()
-  async {
+  saveRideRequestInformation() async {
     //1. save the RideRequest Information
-    var originLocation = Provider.of<AppInfo>(context, listen:false).userPickUpLocation;
-    var destinationLocation =Provider.of<AppInfo>(context, listen:false).userDropOffLocation;
+    var originLocation =
+        Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
+    var destinationLocation =
+        Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
 
-    Map customer =
-    {
+    Map customer = {
       "id": currentUser_API_Info!.id.toString(),
       "name": currentUser_API_Info!.fullName.toString(),
       "phone": currentUser_API_Info!.mobilePhone.toString(),
       "rank": "NORMAL",
       "type": "customer",
     };
-    Map destination =
-    {
+    Map destination = {
       //"key": value
       "address": destinationLocation!.locationName.toString(),
-      "coordinate": [destinationLocation.locationLongitude,destinationLocation.locationLatitude]
+      "coordinate": [
+        destinationLocation.locationLongitude,
+        destinationLocation.locationLatitude
+      ]
     };
 
-    Map pickup =
-    {
+    Map pickup = {
       //"key": value
       "address": originLocation!.locationName.toString(),
-      "coordinate": [originLocation.locationLongitude,originLocation.locationLatitude],
+      "coordinate": [
+        originLocation.locationLongitude,
+        originLocation.locationLatitude
+      ],
     };
 
-    Map requester =
-    {
+    Map requester = {
       "id": currentUser_API_Info!.id.toString(),
       "name": currentUser_API_Info!.fullName.toString(),
       "phone": currentUser_API_Info!.mobilePhone.toString(),
@@ -1621,183 +1647,157 @@ class MainScreenState extends State<MainScreen>
       "type": "customer",
     };
 
-    Map rideRequest =
-    {
-      "additional_services":[],
+    Map rideRequest = {
+      "additional_services": [selectedAdditionalService],
       "customer": customer,
       "destination": destination,
       "distance": tripDirectionDetailsInfo!.distance_value! / 1000,
       "id": idTrip,
+      "payment_method": selectedPaymentMethod,
       "pickup": pickup,
       "price": tripFare,
       "request_time": DateTime.now().toString(),
       "request_type": "ORDINARY",
-      "requester":requester,
-      "vehicle_type":selectedCarType!.id,
+      "requester": requester,
+      "vehicle_type": selectedCarType!.id,
     };
 
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('http://209.38.168.38/trip/customer/book/customer'),
+    var response = await http.post(
+        Uri.parse('http://209.38.168.38/trip/customer/book/customer'),
         headers: {"Content-Type": "application/json"},
-        body: body
-    );
+        body: body);
     print("THIS IS RIDE REQUEST RESPONSE::::::: ${response.body}");
 
-    if(response.statusCode == 201){
+    if (response.statusCode == 201) {
       var responseDecode = jsonDecode(response.body);
-     print("This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
-
-    }else{
+      print(
+          "This response BOOK XE:::::::::::::${responseDecode['code'] as String}");
+    } else {
       Fluttertoast.showToast(msg: "Error Occurred during Booking");
       throw Exception('Failed to call Driver');
     }
-
-    //   if((eventSnap.snapshot.value as Map)["driverLocation"] != null)
-    //   {
-    //     double driverCurrentPositionLat = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["latitude"].toString());
-    //     double driverCurrentPositionLng = double.parse((eventSnap.snapshot.value as Map)["driverLocation"]["longitude"].toString());
-    //
-    //     LatLng driverCurrentPositionLatLng = LatLng(driverCurrentPositionLat, driverCurrentPositionLng);
-    //     //Status = accepted
-    //     if(userRideRequestStatus == "accepted")
-    //     {
-    //       updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng);
-    //     }
-    //     //Status = arrived
-    //     if(userRideRequestStatus == "arrived")
-    //     {
-    //       setState(() {
-    //         driverRideStatus = "Driver has Arrived";
-    //       });
-    //     }
-    //     //Status = ontrip
-    //     if(userRideRequestStatus == "ontrip")
-    //     {
-    //       updateReachingTimeToUserDropOffLocation(driverCurrentPositionLatLng);
-    //     }
-    //   }
-    // });
-    //onlineNearByAvailableDriversList = GeoFireAssistant.activeNearbyAvailableDriversList;
-    //searchNearestOnlineDrivers();
   }
-  calculateFare()
-  async {
-    //1. save the RideRequest Information
-    var originLocation = Provider.of<AppInfo>(context, listen:false).userPickUpLocation;
-    var destinationLocation =Provider.of<AppInfo>(context, listen:false).userDropOffLocation;
 
-    Map customer =
-    {
+  calculateFare() async {
+    //1. save the RideRequest Information
+    var originLocation =
+        Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
+    var destinationLocation =
+        Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
+
+    Map customer = {
       "id": currentUser_API_Info!.id.toString(),
       "name": currentUser_API_Info!.fullName.toString(),
       "phone": currentUser_API_Info!.mobilePhone.toString(),
       "rank": "NORMAL",
       "type": "customer",
     };
-    Map destination =
-    {
+    Map destination = {
       //"key": value
       "address": destinationLocation!.locationName.toString(),
-      "coordinate": [destinationLocation.locationLongitude,destinationLocation.locationLatitude]
+      "coordinate": [
+        destinationLocation.locationLongitude,
+        destinationLocation.locationLatitude
+      ]
     };
 
-    Map pickup =
-    {
+    Map pickup = {
       //"key": value
       "address": originLocation!.locationName.toString(),
-      "coordinate": [originLocation.locationLongitude,originLocation.locationLatitude],
+      "coordinate": [
+        originLocation.locationLongitude,
+        originLocation.locationLatitude
+      ],
     };
 
-    Map rideRequest =
-    {
-      "additional_services":[],
+    Map rideRequest = {
+      "additional_services": [],
       "customer": customer,
       "destination": destination,
       "distance": tripDirectionDetailsInfo!.distance_value! / 1000,
       "pickup": pickup,
       "request_type": "ORDINARY",
-      "vehicle_type":selectedCarType!.id,
-
+      "vehicle_type": selectedCarType!.id,
     };
     print("Ride request:::::::: ${json.encode(rideRequest)}");
 
     var body = json.encode(rideRequest);
-    var response = await http.post(Uri.parse('http://209.38.168.38/trip/customer/estimate/customer'),
+    var response = await http.post(
+        Uri.parse('http://209.38.168.38/trip/customer/estimate/customer'),
         headers: {"Content-Type": "application/json"},
-        body: body
-    );
+        body: body);
     print("THIS IS RIDE REQUEST RESPONSE::::::: ${response.body}");
 
-    if(response.statusCode == 201){
+    if (response.statusCode == 201) {
       var responseDecode = jsonDecode(response.body);
       setState(() {
         tripFare = responseDecode['result'];
         idTrip = responseDecode['trip_id'];
       });
-    }else{
-
+    } else {
       Fluttertoast.showToast(msg: "Error Occurred during Estimate FARE");
       throw Exception('Failed to Estimate FARE');
     }
   }
 
-  updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async
-  {
-    if(requestPositionInfo == true)
-    {
+  updateArrivalTimeToUserPickupLocation(driverCurrentPositionLatLng) async {
+    if (requestPositionInfo == true) {
       requestPositionInfo = false;
-      LatLng userPickUpPosition = LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
-      var directionDetailsInfo = await AssistantMethods.obtainOriginToDestinationDirectionDetails(
+      LatLng userPickUpPosition =
+          LatLng(userCurrentPosition!.latitude, userCurrentPosition!.longitude);
+      var directionDetailsInfo =
+          await AssistantMethods.obtainOriginToDestinationDirectionDetails(
         driverCurrentPositionLatLng,
         userPickUpPosition,
       );
-      if(directionDetailsInfo == null)
-      {
+      if (directionDetailsInfo == null) {
         return;
       }
 
       setState(() {
-        driverRideStatus = "Driver is Coming :: " + directionDetailsInfo.duration_text.toString();
+        driverRideStatus = "Driver is Coming :: " +
+            directionDetailsInfo.duration_text.toString();
       });
 
       requestPositionInfo = true;
     }
   }
 
-  updateReachingTimeToUserDropOffLocation(driverCurrentPositionLatLng) async
-  {
-    if(requestPositionInfo == true)
-    {
+  updateReachingTimeToUserDropOffLocation(driverCurrentPositionLatLng) async {
+    if (requestPositionInfo == true) {
       requestPositionInfo = false;
 
-      var dropOffLocation = Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
+      var dropOffLocation =
+          Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
 
-      LatLng userDestinationPosition = LatLng(dropOffLocation!.locationLatitude!, dropOffLocation.locationLongitude!);
+      LatLng userDestinationPosition = LatLng(
+          dropOffLocation!.locationLatitude!,
+          dropOffLocation.locationLongitude!);
 
-      var directionDetailsInfo = await AssistantMethods.obtainOriginToDestinationDirectionDetails(
+      var directionDetailsInfo =
+          await AssistantMethods.obtainOriginToDestinationDirectionDetails(
         driverCurrentPositionLatLng,
         userDestinationPosition,
       );
-      if(directionDetailsInfo == null)
-      {
+      if (directionDetailsInfo == null) {
         return;
       }
 
       setState(() {
-        driverRideStatus = "Going towards Destination :: " + directionDetailsInfo.duration_text.toString();
+        driverRideStatus = "Going towards Destination :: " +
+            directionDetailsInfo.duration_text.toString();
       });
 
       requestPositionInfo = true;
     }
   }
 
-  searchNearestOnlineDrivers() async
-  {
+  searchNearestOnlineDrivers() async {
     //no active driver available
-    if(onlineNearByAvailableDriversList.length == 0)
-    {
+    if (onlineNearByAvailableDriversList.length == 0) {
       //cancel/delete the RideRequest Information
       referenceRideRequest!.remove();
 
@@ -1808,10 +1808,11 @@ class MainScreenState extends State<MainScreen>
         pLineCoOrdinatesList.clear();
       });
 
-      Fluttertoast.showToast(msg: "No Online Nearest Driver Available. Search Again after some time, Restarting App Now.");
+      Fluttertoast.showToast(
+          msg:
+              "No Online Nearest Driver Available. Search Again after some time, Restarting App Now.");
 
-      Future.delayed(const Duration(milliseconds: 4000), ()
-      {
+      Future.delayed(const Duration(milliseconds: 4000), () {
         SystemNavigator.pop();
       });
 
@@ -1820,17 +1821,19 @@ class MainScreenState extends State<MainScreen>
 
     await retrieveOnlineDriversInformation(onlineNearByAvailableDriversList);
 
-    var response = await Navigator.push(context, MaterialPageRoute(builder: (c)=> SelectNearestActiveDriversScreen(referenceRideRequest: referenceRideRequest)));
-    if(response == "driverChose")
-    {
-      FirebaseDatabase.instance.ref()
+    var response = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (c) => SelectNearestActiveDriversScreen(
+                referenceRideRequest: referenceRideRequest)));
+    if (response == "driverChose") {
+      FirebaseDatabase.instance
+          .ref()
           .child("drivers")
           .child(chosenDriverId!)
           .once()
-          .then((snap)
-      {
-        if(snap.snapshot.value != null)
-        {
+          .then((snap) {
+        if (snap.snapshot.value != null) {
           //send notification to that specific driver
           sendNotificationToDriverNow(chosenDriverId!);
 
@@ -1838,20 +1841,21 @@ class MainScreenState extends State<MainScreen>
           showWaitingResponseFromDriverUI();
 
           //Response from a Driver
-          FirebaseDatabase.instance.ref()
+          FirebaseDatabase.instance
+              .ref()
               .child("drivers")
               .child(chosenDriverId!)
               .child("newRideStatus")
-              .onValue.listen((eventSnapshot)
-          {
+              .onValue
+              .listen((eventSnapshot) {
             //1 Driver has cancel the rideRequest :: Push notification
             //(newRideStatus == idle)
-            if(eventSnapshot.snapshot.value == "idle")
-            {
-              Fluttertoast.showToast(msg: "The driver has cancel your request. Please choose another driver.");
+            if (eventSnapshot.snapshot.value == "idle") {
+              Fluttertoast.showToast(
+                  msg:
+                      "The driver has cancel your request. Please choose another driver.");
 
-              Future.delayed(const Duration(microseconds: 3000), ()
-              {
+              Future.delayed(const Duration(microseconds: 3000), () {
                 Fluttertoast.showToast(msg: "Restart App Now");
                 SystemNavigator.pop();
               });
@@ -1859,104 +1863,99 @@ class MainScreenState extends State<MainScreen>
 
             //2. Driver has accepted the rideRequest::Push notification
             //(newRideStatus == accepted)
-            if(eventSnapshot.snapshot.value == "accepted")
-            {
+            if (eventSnapshot.snapshot.value == "accepted") {
               //Design and display UI driver information
               showUIForAssignedDriverInfo();
             }
           });
-        }
-        else
-        {
+        } else {
           Fluttertoast.showToast(msg: "This driver do not exist. Try again");
         }
       });
     }
   }
 
-  showUIForAssignedDriverInfo()
-  {
+  showUIForAssignedDriverInfo() {
     setState(() {
       searchLocationContainerHeight = 0;
       waitingResponseFromDriverUIContainerHeight = 0;
-      assignedDriverContainerHeight = 250;
-      waitingShowMessageUIContainerHeight= 0;
+      assignedDriverContainerHeight = 300;
+      tripArrivedUIContainerHeight = 0;
     });
   }
 
-  showWaitingResponseFromDriverUI()
-  {
+  showWaitingResponseFromDriverUI() {
     setState(() {
       searchLocationContainerHeight = 0;
-      waitingResponseFromDriverUIContainerHeight = 240;
+      waitingResponseFromDriverUIContainerHeight = 300;
       assignedDriverContainerHeight = 0;
-      waitingShowMessageUIContainerHeight= 0;
+      tripArrivedUIContainerHeight = 0;
     });
   }
-  showMessageResponseFromDriverUI()
-  {
+
+  showMessageResponseFromDriverUI() {
+    setState(() {
+      searchLocationContainerHeight = 0;
+      waitingResponseFromDriverUIContainerHeight = 0;
+      assignedDriverContainerHeight = 240;
+      tripArrivedUIContainerHeight = 0;
+    });
+  }
+  showTripArrivedResponseFromDriverUI() {
     setState(() {
       searchLocationContainerHeight = 0;
       waitingResponseFromDriverUIContainerHeight = 0;
       assignedDriverContainerHeight = 0;
-      waitingShowMessageUIContainerHeight= 240;
+      tripArrivedUIContainerHeight = 240;
     });
   }
 
-  sendNotificationToDriverNow(String chosenDriverId)
-  {
+  sendNotificationToDriverNow(String chosenDriverId) {
     //assign /Set rideRequestId to newRideStatus in Driver Parent node for chosen driver
-    FirebaseDatabase.instance.ref()
+    FirebaseDatabase.instance
+        .ref()
         .child("drivers")
         .child(chosenDriverId)
         .child("newRideStatus")
         .set(referenceRideRequest!.key);
 
     //automate the push notification service
-    FirebaseDatabase.instance.ref()
+    FirebaseDatabase.instance
+        .ref()
         .child("drivers")
         .child(chosenDriverId)
-        .child("token").once()
-        .then((snap)
-    {
-      if(snap.snapshot.value != null)
-      {
+        .child("token")
+        .once()
+        .then((snap) {
+      if (snap.snapshot.value != null) {
         //send notification to that specific driver
         String deviceRegistrationToken = snap.snapshot.value.toString();
 
         //send Notification Now
-        AssistantMethods.sendNotificationToDriverNow(
-            deviceRegistrationToken,
-            referenceRideRequest!.key.toString(),
-            context
-        );
+        AssistantMethods.sendNotificationToDriverNow(deviceRegistrationToken,
+            referenceRideRequest!.key.toString(), context);
         Fluttertoast.showToast(msg: "Notification sent Successfully");
-      }
-      else
-      {
+      } else {
         Fluttertoast.showToast(msg: "Please chose another driver.");
         return;
       }
     });
-
   }
 
-  retrieveOnlineDriversInformation(List onlineNearestDriversList) async
-  {
+  retrieveOnlineDriversInformation(List onlineNearestDriversList) async {
     DatabaseReference ref = FirebaseDatabase.instance.ref().child("drivers");
-    for(int i=0; i<onlineNearestDriversList.length; i++)
-    {
-      await ref.child(onlineNearestDriversList[i].driverId.toString())
+    for (int i = 0; i < onlineNearestDriversList.length; i++) {
+      await ref
+          .child(onlineNearestDriversList[i].driverId.toString())
           .once()
-          .then((dataSnapshot)
-      {
+          .then((dataSnapshot) {
         var driverKeyInfo = dataSnapshot.snapshot.value;
         dList.add(driverKeyInfo);
       });
     }
   }
-  Future generateAndGetToken() async
-  {
+
+  Future generateAndGetToken() async {
     String? registrationToken = await messaging.getToken();
     print("FCM Registration Token: ");
     print(registrationToken);
@@ -1964,28 +1963,27 @@ class MainScreenState extends State<MainScreen>
     messaging.subscribeToTopic("allUsers");
   }
 
-  readCurrentCustomerInformation() async
-  {
+  readCurrentCustomerInformation() async {
     PushNotificationSystem pushNotificationSystem = PushNotificationSystem();
     pushNotificationSystem.initializeCloudMessaging(context);
     pushNotificationSystem.generateAndGetToken();
   }
 
   @override
-  void initState()
-  {
+  void initState() {
     super.initState();
     checkIfPermissionAllowed();
     readCurrentUserInformation1();
     initializeCloudMessaging();
     generateAndGetToken();
-    //AssistantMethods.readCurrentOnlineUserInfo_API();
     carTypeList = getCarTypeList();
+    getAdditionalServices();
   }
 
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context) {
+    final currencyFormatter =
+        NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
     createActiveNearByDriverIconMarker();
     return Scaffold(
       key: sKey,
@@ -2003,7 +2001,6 @@ class MainScreenState extends State<MainScreen>
       ),
       body: Stack(
         children: [
-
           GoogleMap(
             padding: EdgeInsets.only(bottom: bottomPaddingOfMap),
             mapType: MapType.normal,
@@ -2014,15 +2011,14 @@ class MainScreenState extends State<MainScreen>
             polylines: polyLineSet,
             markers: markersSet,
             circles: circlesSet,
-            onMapCreated: (GoogleMapController controller)
-            {
+            onMapCreated: (GoogleMapController controller) {
               _controllerGoogleMap.complete(controller);
               newGoogleMapController = controller;
 
               //for black theme google map
               blackThemegoogleMap();
               setState(() {
-                bottomPaddingOfMap = 330;
+                bottomPaddingOfMap = 350;
               });
               locateUserPosition();
             },
@@ -2033,14 +2029,10 @@ class MainScreenState extends State<MainScreen>
             top: 30,
             left: 14,
             child: GestureDetector(
-              onTap: ()
-              {
-                if(openNavigationDrawer)
-                {
+              onTap: () {
+                if (openNavigationDrawer) {
                   sKey.currentState!.openDrawer();
-                }
-                else
-                {
+                } else {
                   //restart-refresh-minimize app programmatically
                   SystemNavigator.pop();
                 }
@@ -2050,7 +2042,6 @@ class MainScreenState extends State<MainScreen>
                 child: Icon(
                   openNavigationDrawer ? Icons.menu : Icons.close,
                   color: Colors.black54,
-
                 ),
               ),
             ),
@@ -2074,52 +2065,119 @@ class MainScreenState extends State<MainScreen>
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   child: Column(
                     children: [
-                      //select CarType
+                      //select CarType, payment method
                       Row(
                         children: [
-                          FutureBuilder<List<VehicleType>>(
-                              future: carTypeList,
-                              builder: (context,snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return const CircularProgressIndicator();
-                                }
-                                else if (snapshot.hasError) {
-                                  return const Text('Error loading data');
-                                }
-                                else if (!snapshot.hasData) {
-                                  return const Text('No data available');
-                                }
-                                else {
-                                  final carTypeList = snapshot.data!;
-                                  return DropdownButton(iconSize: 20,
-                                      dropdownColor: Colors.transparent,
-                                      hint: const Text(
-                                        "Please choose Car Type",
-                                        style: TextStyle(
-
-                                            color: Colors.grey
-                                        ),
-                                      ),
-                                      value: selectedCarType,
-                                      items: carTypeList.map((carType) {
-                                        return DropdownMenuItem(
-                                          child: Text(
-                                            carType.name,
-                                            style: const TextStyle(color: Colors.grey),
-                                          ),
-                                          value: carType,
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          selectedCarType = val;
-                                        });
-                                      });
-                                }
-                              }),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.directions_car,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(
+                                width: 12.0,
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Vehicle Type",
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12),
+                                  ),
+                                  FutureBuilder<List<VehicleType>>(
+                                      future: carTypeList,
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const CircularProgressIndicator();
+                                        } else if (snapshot.hasError) {
+                                          return const Text(
+                                              'Error loading data');
+                                        } else if (!snapshot.hasData) {
+                                          return const Text(
+                                              'No data available');
+                                        } else {
+                                          final carTypeList = snapshot.data!;
+                                          return DropdownButton(
+                                              iconSize: 20,
+                                              dropdownColor: Colors.black,
+                                              hint: const Text(
+                                                "Choose Car Type",
+                                                style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 12),
+                                              ),
+                                              value: selectedCarType,
+                                              items: carTypeList.map((carType) {
+                                                return DropdownMenuItem(
+                                                  child: Text(
+                                                    carType.name,
+                                                    style: const TextStyle(
+                                                        color: Colors.grey),
+                                                  ),
+                                                  value: carType,
+                                                );
+                                              }).toList(),
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  selectedCarType = val;
+                                                });
+                                              });
+                                        }
+                                      }),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(
+                            width: 20,
+                          ),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.payment_rounded,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(
+                                width: 12.0,
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Payment method",
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12),
+                                  ),
+                                  DropdownButton(
+                                    iconSize: 20,
+                                    dropdownColor: Colors.black,
+                                    hint: const Text(
+                                      "Choose Payment method",
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.grey),
+                                    ),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey),
+                                    value: selectedPaymentMethod,
+                                    onChanged: dropdownPaymentMethod,
+                                    items: const [
+                                      DropdownMenuItem(
+                                          child: Text("Cash"), value: "cash"),
+                                      DropdownMenuItem(
+                                          child: Text("ATM"),
+                                          value: "epayment"),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                       const Divider(
@@ -2127,28 +2185,56 @@ class MainScreenState extends State<MainScreen>
                         thickness: 1,
                         color: Colors.grey,
                       ),
-                      //select payment method
+                      //additional Service
+
                       Row(
                         children: [
-                          DropdownButton(
-                            iconSize: 20,
-                            dropdownColor: Colors.transparent,
-                            hint: const Text(
-                              "Please choose Payment method",
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey
+                          const Icon(
+                            Icons.add_box_rounded,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(
+                            width: 12.0,
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Additional Service",
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 12),
                               ),
-                            ),
-                            style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey
-                            ),
-                            value: selectedPaymentMethod,
-                            onChanged: dropdownPaymentMethod,
-                            items: const [
-                              DropdownMenuItem(child: Text("Cash"), value:"Cash"),
-                              DropdownMenuItem(child: Text("ATM"), value:"ATM"),
+                              DropdownButton(
+                                iconSize: 20,
+                                dropdownColor: Colors.black,
+                                hint: const Text(
+                                  "Please choose Additional Service",
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.grey),
+                                ),
+                                style: const TextStyle(
+                                    fontSize: 14, color: Colors.grey),
+                                value: selectedAdditionalService,
+                                onChanged: (val) {
+                                  setState(() {
+                                    selectedAdditionalService = val;
+                                  });
+                                },
+                                //items: additionalServices.where((additionalServices)=> additionalServices.type == "NORMAL").map((additionalService) {
+                                items:
+                                    additionalServices.map((additionalService) {
+                                  return DropdownMenuItem(
+                                    child: Text(
+                                      additionalService.type == "VIP"
+                                          ? "${additionalService.name} + ${currencyFormatter.format(additionalService.price)} (VIP)"
+                                          : "${additionalService.name} + ${currencyFormatter.format(additionalService.price)}",
+                                      style:
+                                          const TextStyle(color: Colors.grey),
+                                    ),
+                                    value: additionalService.name,
+                                  );
+                                }).toList(),
+                              ),
                             ],
                           ),
                         ],
@@ -2161,35 +2247,55 @@ class MainScreenState extends State<MainScreen>
 
                       //select pick up address
                       GestureDetector(
-                        onTap: () async
-                        {
+                        onTap: () async {
                           //search places screen
-                          var responseFromSearchScreen = await Navigator.push(context, MaterialPageRoute(builder: (c) => Search_pickup_place()));
+                          var responseFromSearchScreen = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (c) => Search_pickup_place()));
 
-                          if(responseFromSearchScreen == "obtainedPickUp")
-                          {
-                            var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
-                            var originLatLng = LatLng(originPosition!.locationLatitude!, originPosition.locationLongitude!);
-                            CameraPosition cameraPosition = CameraPosition(target: originLatLng, zoom: 14);
-                            newGoogleMapController!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+                          if (responseFromSearchScreen == "obtainedPickUp") {
+                            var originPosition =
+                                Provider.of<AppInfo>(context, listen: false)
+                                    .userPickUpLocation;
+                            var originLatLng = LatLng(
+                                originPosition!.locationLatitude!,
+                                originPosition.locationLongitude!);
+                            CameraPosition cameraPosition =
+                                CameraPosition(target: originLatLng, zoom: 14);
+                            newGoogleMapController!.animateCamera(
+                                CameraUpdate.newCameraPosition(cameraPosition));
                           }
                         },
                         child: Row(
                           children: [
-                            const Icon(Icons.add_location_alt_outlined, color: Colors.grey,),
-                            const SizedBox(width:12.0,),
+                            const Icon(
+                              Icons.add_location_alt_outlined,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(
+                              width: 12.0,
+                            ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   "From",
-                                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12),
                                 ),
                                 Text(
-                                  Provider.of<AppInfo>(context).userPickUpLocation != null
-                                      ? (Provider.of<AppInfo>(context).userPickUpLocation!.locationName!).substring(0,10) + "..."
+                                  Provider.of<AppInfo>(context)
+                                              .userPickUpLocation !=
+                                          null
+                                      ? (Provider.of<AppInfo>(context)
+                                                  .userPickUpLocation!
+                                                  .locationName!)
+                                              .substring(0, 30) +
+                                          "..."
                                       : "Where are you?",
-                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 14),
                                 ),
                               ],
                             ),
@@ -2197,7 +2303,9 @@ class MainScreenState extends State<MainScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 10,),
+                      const SizedBox(
+                        height: 10,
+                      ),
 
                       const Divider(
                         height: 1,
@@ -2207,13 +2315,14 @@ class MainScreenState extends State<MainScreen>
 
                       //select drop off address
                       GestureDetector(
-                        onTap: () async
-                        {
+                        onTap: () async {
                           //search places screen
-                          var responseFromSearchScreen = await Navigator.push(context, MaterialPageRoute(builder: (c) => SearchPlacesScreen()));
+                          var responseFromSearchScreen = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (c) => SearchPlacesScreen()));
 
-                          if(responseFromSearchScreen == "obtainedDropoff")
-                          {
+                          if (responseFromSearchScreen == "obtainedDropoff") {
                             setState(() {
                               openNavigationDrawer = false;
                             });
@@ -2225,20 +2334,31 @@ class MainScreenState extends State<MainScreen>
                         },
                         child: Row(
                           children: [
-                            const Icon(Icons.add_location_alt_outlined, color: Colors.grey,),
-                            const SizedBox(width:12.0,),
+                            const Icon(
+                              Icons.add_location_alt_outlined,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(
+                              width: 12.0,
+                            ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   "To",
-                                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12),
                                 ),
                                 Text(
-                                  Provider.of<AppInfo>(context).userDropOffLocation != null
-                                      ? Provider.of<AppInfo>(context).userDropOffLocation!.locationName!
+                                  Provider.of<AppInfo>(context)
+                                              .userDropOffLocation !=
+                                          null
+                                      ? Provider.of<AppInfo>(context)
+                                          .userDropOffLocation!
+                                          .locationName!
                                       : "Where to go?",
-                                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 14),
                                 ),
                               ],
                             ),
@@ -2246,35 +2366,48 @@ class MainScreenState extends State<MainScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 10,),
+                      const SizedBox(
+                        height: 10,
+                      ),
 
                       const Divider(
                         height: 1,
                         thickness: 1,
                         color: Colors.grey,
                       ),
-                    //Fare
+                      //Fare
                       Row(
                         children: [
-                          const Icon(Icons.monetization_on_outlined, color: Colors.grey,),
-                          const SizedBox(width:12.0,),
+                          const Icon(
+                            Icons.monetization_on_outlined,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(
+                            width: 12.0,
+                          ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 "Fare",
-                                style: TextStyle(color: Colors.grey, fontSize: 12),
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 12),
                               ),
                               Text(
-                                tripFare != null? tripFare.toString(): "",
-                                style: const TextStyle(color: Colors.grey, fontSize: 14),
+                                tripFare != null
+                                    ? "${currencyFormatter.format(tripFare)}"
+                                    : "",
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 14),
                               ),
                             ],
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 10,),
+                      const SizedBox(
+                        height: 10,
+                      ),
                       const Divider(
                         height: 1,
                         thickness: 1,
@@ -2285,23 +2418,21 @@ class MainScreenState extends State<MainScreen>
                         child: const Text(
                           "Request a Ride",
                         ),
-                        onPressed: ()
-                        {
-                          if(Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null)
-                          {
+                        onPressed: () {
+                          if (Provider.of<AppInfo>(context, listen: false)
+                                  .userDropOffLocation !=
+                              null) {
                             saveRideRequestInformation();
                             showWaitingResponseFromDriverUI();
+                          } else {
+                            Fluttertoast.showToast(
+                                msg: "Please select destination location");
                           }
-                          else
-                          {
-                            Fluttertoast.showToast(msg: "Please select destination location");
-                          }
-
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
-                            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)
-                        ),
+                            textStyle: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold)),
                       )
                     ],
                   ),
@@ -2330,16 +2461,22 @@ class MainScreenState extends State<MainScreen>
                     child: AnimatedTextKit(
                       animatedTexts: [
                         FadeAnimatedText(
-                          'Waiting for Response \n from Driver',
+                          'Searching Driver',
                           duration: const Duration(seconds: 6),
                           textAlign: TextAlign.center,
-                          textStyle: const TextStyle(fontSize: 30.0, color:Colors.white, fontWeight: FontWeight.bold),
+                          textStyle: const TextStyle(
+                              fontSize: 30.0,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold),
                         ),
                         ScaleAnimatedText(
                           'Please wait,..',
                           duration: const Duration(seconds: 10),
                           textAlign: TextAlign.center,
-                          textStyle: const TextStyle(fontSize: 32.0, color:Colors.white, fontFamily: 'Canterbury'),
+                          textStyle: const TextStyle(
+                              fontSize: 32.0,
+                              color: Colors.white,
+                              fontFamily: 'Canterbury'),
                         ),
                       ],
                     ),
@@ -2370,13 +2507,12 @@ class MainScreenState extends State<MainScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     //status of ride
-                    const Center(
+                    Center(
                       child: Text(
-                        "Driver is Coming",
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        messageString.toString(),
+                        style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
                           color: Colors.white54,
                         ),
                       ),
@@ -2393,28 +2529,63 @@ class MainScreenState extends State<MainScreen>
                       height: 16,
                     ),
                     //driver vehicle details
-                    Text(
-                      driverCarDetails,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white54,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 2,
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(
+                          width: 12.0,
+                        ),
+                        const Text(
+                          "Driver name: ",
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                        Text(
+                          driverName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white54,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
 
-                    //driver name
-                    Text(
-                      driverName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white54,
-                      ),
-                    ),
                     const SizedBox(
-                      height: 18,
+                      height: 5,
+                    ),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.directions_car,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(
+                          width: 12.0,
+                        ),
+                        const Text(
+                          "Vehicle details: ",
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                        Text(
+                          driverCarDetails,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(
+                      height: 10,
                     ),
                     const Divider(
                       height: 2,
@@ -2422,14 +2593,256 @@ class MainScreenState extends State<MainScreen>
                       color: Colors.white54,
                     ),
                     const SizedBox(
-                      height: 18,
+                      height: 10,
+                    ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.add_box_rounded,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(
+                          width: 12.0,
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Additional Service",
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                            DropdownButton(
+                              iconSize: 20,
+                              dropdownColor: Colors.black,
+                              hint: const Text(
+                                "Please choose Additional Service",
+                                style:
+                                    TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                              value: selectedAdditionalService,
+                              onChanged: (val) {
+                                setState(() {
+                                  selectedAdditionalService = val;
+                                });
+                              },
+                              //items: additionalServices.where((additionalServices)=> additionalServices.type == "NORMAL").map((additionalService) {
+                              items:
+                                  additionalServices.map((additionalService) {
+                                return DropdownMenuItem(
+                                  child: Text(
+                                    additionalService.type == "VIP"
+                                        ? "${additionalService.name} + ${currencyFormatter.format(additionalService.price)} (VIP)"
+                                        : "${additionalService.name} + ${currencyFormatter.format(additionalService.price)}",
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  value: additionalService.name,
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    //call driver button
+
+                        Padding(
+                          padding: const EdgeInsets.all(1.0),
+                          child:
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                  onPressed: () {
+                                    //call Driver
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.phone_android,
+                                    color: Colors.black54,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    "Add Service",
+                                    style: TextStyle(
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )),
+
+                              const SizedBox(width: 20,),
+
+                              Visibility(
+                                visible: cancleTripVisibility,
+                                child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) => NotificationCancelTrip(),
+                                          );
+                                    },
+
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.phone_android,
+                                      color: Colors.black54,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      "Cancel",
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )),
+                              ),
+                            ],
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          //UI trip arrived
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: tripArrivedUIContainerHeight,
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(20),
+                  topLeft: Radius.circular(20),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    //status of ride
+                    Center(
+                      child: Text(
+                        textAlign: TextAlign.center,
+                        messageString.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 16,
+                    ),
+                    const Divider(
+                      height: 2,
+                      thickness: 2,
+                      color: Colors.white54,
+                    ),
+                    const SizedBox(
+                      height: 16,
+                    ),
+                    //driver vehicle details
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(
+                          width: 12.0,
+                        ),
+                        const Text(
+                          "Driver name: ",
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                        Text(
+                          driverName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white54,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(
+                      height: 5,
+                    ),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.directions_car,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(
+                          width: 12.0,
+                        ),
+                        const Text(
+                          "Vehicle details: ",
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                        Text(
+                          driverCarDetails,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    const Divider(
+                      height: 2,
+                      thickness: 2,
+                      color: Colors.white54,
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    const Divider(
+                      height: 2,
+                      thickness: 2,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(
+                      height: 10,
                     ),
                     //call driver button
                     Center(
                       child: ElevatedButton.icon(
-                          onPressed: ()
-                          {
-                            //call Driver
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
@@ -2440,80 +2853,45 @@ class MainScreenState extends State<MainScreen>
                             size: 18,
                           ),
                           label: const Text(
-                            "Call Driver",
+                            "Exist",
                             style: TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.bold,
                             ),
-                          )
-                      ),
+                          )),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
-          //UI show message
-          Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: waitingShowMessageUIContainerHeight,
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(20),
-                    topLeft: Radius.circular(20),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Center(
-                    // child: AnimatedTextKit(
-                    //   animatedTexts: [
-                    //     FadeAnimatedText(
-                    //       messageString.toString(),
-                    //       duration: const Duration(seconds: 6),
-                    //       textAlign: TextAlign.center,
-                    //       textStyle: const TextStyle(fontSize: 30.0, color:Colors.white, fontWeight: FontWeight.bold),
-                    //     ),
-                    //     ScaleAnimatedText(
-                    //       messageString.toString(),
-                    //       duration: const Duration(seconds: 10),
-                    //       textAlign: TextAlign.center,
-                    //       textStyle: const TextStyle(fontSize: 32.0, color:Colors.white, fontFamily: 'Canterbury'),
-                    //     ),
-                    //   ],
-                    // ),
-                    child: Text(
-                      messageString.toString(),
-                      style: const TextStyle(fontSize: 32.0, color:Colors.white, fontFamily: 'Canterbury'),
-                    )
-                  ),
-                ),
-              )),
         ],
       ),
     );
-
   }
 
-  Future<void> drawPolyLineFromOriginDestination() async
-  {
 
-    var originPosition = Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
-    var destinationPosition = Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
 
-    var originLatLng = LatLng(originPosition!.locationLatitude!, originPosition.locationLongitude!);
-    var destinationLatLng = LatLng(destinationPosition!.locationLatitude!, destinationPosition.locationLongitude!);
+  Future<void> drawPolyLineFromOriginDestination() async {
+    var originPosition =
+        Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
+    var destinationPosition =
+        Provider.of<AppInfo>(context, listen: false).userDropOffLocation;
+
+    var originLatLng = LatLng(
+        originPosition!.locationLatitude!, originPosition.locationLongitude!);
+    var destinationLatLng = LatLng(destinationPosition!.locationLatitude!,
+        destinationPosition.locationLongitude!);
 
     showDialog(
       context: context,
-      builder: (BuildContext context) => ProgressDialog(message: "Please wait...",),
+      builder: (BuildContext context) => ProgressDialog(
+        message: "Please wait...",
+      ),
     );
-    var directionDetailsInfo = await AssistantMethods.obtainOriginToDestinationDirectionDetails(originLatLng, destinationLatLng);
+    var directionDetailsInfo =
+        await AssistantMethods.obtainOriginToDestinationDirectionDetails(
+            originLatLng, destinationLatLng);
     setState(() {
       tripDirectionDetailsInfo = directionDetailsInfo;
     });
@@ -2521,16 +2899,17 @@ class MainScreenState extends State<MainScreen>
     Navigator.pop(context);
 
     print("these are point = ");
-    print (directionDetailsInfo!.e_points);
+    print(directionDetailsInfo!.e_points);
 
     PolylinePoints pPoints = PolylinePoints();
-    List<PointLatLng> decodedPoyPointsResultList = pPoints.decodePolyline(directionDetailsInfo.e_points!);
+    List<PointLatLng> decodedPoyPointsResultList =
+        pPoints.decodePolyline(directionDetailsInfo.e_points!);
 
     pLineCoOrdinatesList.clear();
-    if(decodedPoyPointsResultList.isNotEmpty)
-    {
+    if (decodedPoyPointsResultList.isNotEmpty) {
       for (var pointLatLng in decodedPoyPointsResultList) {
-        pLineCoOrdinatesList.add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
+        pLineCoOrdinatesList
+            .add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
       }
     }
 
@@ -2544,48 +2923,46 @@ class MainScreenState extends State<MainScreen>
           points: pLineCoOrdinatesList,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          geodesic: true
-      );
+          geodesic: true);
 
       polyLineSet.add(polyline);
     });
 
     LatLngBounds boundsLatLng;
-    if(originLatLng.latitude > destinationLatLng.latitude && originLatLng.longitude > destinationLatLng.longitude)
-    {
-      boundsLatLng = LatLngBounds(southwest: destinationLatLng, northeast: originLatLng);
-    }
-    else if(originLatLng.longitude > destinationLatLng.longitude)
-    {
+    if (originLatLng.latitude > destinationLatLng.latitude &&
+        originLatLng.longitude > destinationLatLng.longitude) {
+      boundsLatLng =
+          LatLngBounds(southwest: destinationLatLng, northeast: originLatLng);
+    } else if (originLatLng.longitude > destinationLatLng.longitude) {
       boundsLatLng = LatLngBounds(
           southwest: LatLng(originLatLng.latitude, destinationLatLng.longitude),
-          northeast: LatLng(destinationLatLng.latitude, originLatLng.longitude)
-      );
-    }
-    else if(originLatLng.latitude > destinationLatLng.latitude)
-    {
+          northeast:
+              LatLng(destinationLatLng.latitude, originLatLng.longitude));
+    } else if (originLatLng.latitude > destinationLatLng.latitude) {
       boundsLatLng = LatLngBounds(
           southwest: LatLng(destinationLatLng.latitude, originLatLng.longitude),
-          northeast: LatLng(originLatLng.latitude, destinationLatLng.longitude)
-      );
-    }
-    else
-    {
-      boundsLatLng = LatLngBounds(southwest: originLatLng, northeast: destinationLatLng);
+          northeast:
+              LatLng(originLatLng.latitude, destinationLatLng.longitude));
+    } else {
+      boundsLatLng =
+          LatLngBounds(southwest: originLatLng, northeast: destinationLatLng);
     }
 
-    newGoogleMapController!.animateCamera(CameraUpdate.newLatLngBounds(boundsLatLng,65));
+    newGoogleMapController!
+        .animateCamera(CameraUpdate.newLatLngBounds(boundsLatLng, 65));
 
     Marker originMarker = Marker(
       markerId: const MarkerId("originID"),
-      infoWindow: InfoWindow(title: originPosition.locationName, snippet: "Origin"),
+      infoWindow:
+          InfoWindow(title: originPosition.locationName, snippet: "Origin"),
       position: originLatLng,
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
     );
 
     Marker destinationMarker = Marker(
       markerId: const MarkerId("destinationID"),
-      infoWindow: InfoWindow(title: destinationPosition.locationName, snippet: "Destination"),
+      infoWindow: InfoWindow(
+          title: destinationPosition.locationName, snippet: "Destination"),
       position: destinationLatLng,
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
     );
@@ -2593,7 +2970,6 @@ class MainScreenState extends State<MainScreen>
     setState(() {
       markersSet.add(originMarker);
       markersSet.add(destinationMarker);
-
     });
 
     Circle originCircle = Circle(
@@ -2617,15 +2993,13 @@ class MainScreenState extends State<MainScreen>
     setState(() {
       circlesSet.add(originCircle);
       circlesSet.add(destinationCircle);
-
     });
   }
 
-  initializeGeoFireListener()
-  {
+  initializeGeoFireListener() {
     Geofire.initialize("activeDrivers");
     Geofire.queryAtLocation(
-        userCurrentPosition!.latitude, userCurrentPosition!.longitude, 10)!
+            userCurrentPosition!.latitude, userCurrentPosition!.longitude, 10)!
         .listen((map) {
       print(map);
       if (map != null) {
@@ -2634,38 +3008,40 @@ class MainScreenState extends State<MainScreen>
         //latitude will be retrieved from map['latitude']
         //longitude will be retrieved from map['longitude']
 
-        switch (callBack)
-            {
-        //whenever any driver become active/online
+        switch (callBack) {
+          //whenever any driver become active/online
           case Geofire.onKeyEntered:
-            ActiveNearbyAvailableDrivers activeNearbyAvailableDriver = ActiveNearbyAvailableDrivers();
+            ActiveNearbyAvailableDrivers activeNearbyAvailableDriver =
+                ActiveNearbyAvailableDrivers();
             activeNearbyAvailableDriver.locationLatitude = map['latitude'];
             activeNearbyAvailableDriver.locationLongitude = map['longitude'];
             activeNearbyAvailableDriver.driverId = map['key'];
-            GeoFireAssistant.activeNearbyAvailableDriversList.add(activeNearbyAvailableDriver);
-            if(activeNearbyDriverKeysLoaded == true)
-            {
+            GeoFireAssistant.activeNearbyAvailableDriversList
+                .add(activeNearbyAvailableDriver);
+            if (activeNearbyDriverKeysLoaded == true) {
               displayActiveDriversOnUsersMap();
             }
             break;
 
-        //whenever any driver become non-active/offline
+          //whenever any driver become non-active/offline
           case Geofire.onKeyExited:
             GeoFireAssistant.deleteOfflineDriverFromList(map['key']);
             displayActiveDriversOnUsersMap();
             break;
 
-        //whenever driver moves - update driver location
+          //whenever driver moves - update driver location
           case Geofire.onKeyMoved:
-            ActiveNearbyAvailableDrivers activeNearbyAvailableDriver = ActiveNearbyAvailableDrivers();
+            ActiveNearbyAvailableDrivers activeNearbyAvailableDriver =
+                ActiveNearbyAvailableDrivers();
             activeNearbyAvailableDriver.locationLatitude = map['latitude'];
             activeNearbyAvailableDriver.locationLongitude = map['longitude'];
             activeNearbyAvailableDriver.driverId = map['key'];
-            GeoFireAssistant.updateActiveNearbyAvailableDriverLocation(activeNearbyAvailableDriver);
+            GeoFireAssistant.updateActiveNearbyAvailableDriverLocation(
+                activeNearbyAvailableDriver);
             displayActiveDriversOnUsersMap();
             break;
 
-        //display those online/active drivers on user's map
+          //display those online/active drivers on user's map
           case Geofire.onGeoQueryReady:
             activeNearbyDriverKeysLoaded = true;
             displayActiveDriversOnUsersMap();
@@ -2676,20 +3052,20 @@ class MainScreenState extends State<MainScreen>
     });
   }
 
-  displayActiveDriversOnUsersMap()
-  {
+  displayActiveDriversOnUsersMap() {
     setState(() {
       markersSet.clear();
       circlesSet.clear();
 
       Set<Marker> driversMarkerSet = Set<Marker>();
 
-      for(ActiveNearbyAvailableDrivers eachDriver in GeoFireAssistant.activeNearbyAvailableDriversList)
-      {
-        LatLng eachDriverActivePosition = LatLng(eachDriver.locationLatitude!, eachDriver.locationLongitude!);
+      for (ActiveNearbyAvailableDrivers eachDriver
+          in GeoFireAssistant.activeNearbyAvailableDriversList) {
+        LatLng eachDriverActivePosition =
+            LatLng(eachDriver.locationLatitude!, eachDriver.locationLongitude!);
 
         Marker marker = Marker(
-          markerId: MarkerId("driver"+eachDriver.driverId!),
+          markerId: MarkerId("driver" + eachDriver.driverId!),
           position: eachDriverActivePosition,
           icon: activeNearbyIcon!,
           rotation: 360,
@@ -2704,16 +3080,14 @@ class MainScreenState extends State<MainScreen>
     });
   }
 
-  createActiveNearByDriverIconMarker()
-  {
-    if(activeNearbyIcon == null)
-    {
-      ImageConfiguration imageConfiguration = createLocalImageConfiguration(context, size: Size(2, 2));
-      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/car.png").then((value)
-      {
+  createActiveNearByDriverIconMarker() {
+    if (activeNearbyIcon == null) {
+      ImageConfiguration imageConfiguration =
+          createLocalImageConfiguration(context, size: Size(2, 2));
+      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/car.png")
+          .then((value) {
         activeNearbyIcon = value;
       });
     }
   }
 }
-

@@ -1,21 +1,21 @@
-
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
 
-import '../models/user_ride_Request_information.dart';
+import '../splashScreen/splash_screen.dart';
 
-class NotificationDialogBox extends StatefulWidget
+class NotificationConfirmPayment extends StatefulWidget
 {
-  UserRideRequestInformation? userRideRequestDetails;
-
-  NotificationDialogBox({this.userRideRequestDetails});
+  String message;
+  String code;
+  NotificationConfirmPayment({required this.message , required this.code});
 
   @override
-  State<NotificationDialogBox> createState() => _NotificationDialogBoxState();
+  State<NotificationConfirmPayment> createState() => _NotificationConfirmPaymentState();
 }
 
-class _NotificationDialogBoxState extends State<NotificationDialogBox>
+class _NotificationConfirmPaymentState extends State<NotificationConfirmPayment>
 {
   @override
   Widget build(BuildContext context) {
@@ -38,14 +38,14 @@ class _NotificationDialogBoxState extends State<NotificationDialogBox>
             const SizedBox(height: 14,),
             Image.asset("images/car_logo.png", width: 160,),
             const SizedBox(height: 10,),
-        //title
+            //title
             const Text(
-              "New Ride Request",
-                style:  TextStyle(
+              "Payment Information",
+              style:  TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
                   color: Colors.grey
-                ),
+              ),
             ),
 
             const SizedBox(height: 20,),
@@ -55,7 +55,7 @@ class _NotificationDialogBoxState extends State<NotificationDialogBox>
               thickness: 3,
             ),
 
-          //address origin destination
+            //address origin destination
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -63,34 +63,13 @@ class _NotificationDialogBoxState extends State<NotificationDialogBox>
                   //origin location with icon
                   Row(
                     children: [
-                      Image.asset("images/origin.png", width: 30, height: 30,),
                       const SizedBox(width: 22,),
                       Expanded(
                         child: Container(
                           child: Text(
-                            widget.userRideRequestDetails!.originAddress!,
+                            widget.message.toString(),
                             style: const TextStyle(
-                              fontSize: 16, color: Colors.grey
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25,),
-
-                  //destination location with icon
-                  Row(
-                    children: [
-                      Image.asset("images/destination.png", width: 30, height: 30,),
-                      const SizedBox(width: 22,),
-                      Expanded(
-                        child: Container(
-                          child: Text(
-                            widget.userRideRequestDetails!.destinationAddress!,
-                            style: const TextStyle(
-                              fontSize: 16, color: Colors.grey
+                                fontSize: 30, color: Colors.grey
                             ),
                           ),
                         ),
@@ -114,36 +93,35 @@ class _NotificationDialogBoxState extends State<NotificationDialogBox>
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.red,
                     ),
                     onPressed: ()
                     {
-                      //accept the rideRequest
-                      acceptRideRequest(context);
+                      //cancel the rideRequest
+                      Navigator.pop(context);
 
                     },
                     child: Text(
-                      "Accept".toUpperCase(),
+                      "Cancel".toUpperCase(),
                       style: const TextStyle(
                         fontSize: 14,
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 25,),
+
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.green,
                     ),
                     onPressed: ()
                     {
-
-                      //cancel the rideRequest
-                      Navigator.pop(context);
-                      canceltRideRequest(context);
-
+                      //accept the rideRequest
+                      //acceptRideRequest(context);
                     },
                     child: Text(
-                      "Cancel".toUpperCase(),
+                      "Ok".toUpperCase(),
                       style: const TextStyle(
                         fontSize: 14,
                       ),
@@ -158,14 +136,40 @@ class _NotificationDialogBoxState extends State<NotificationDialogBox>
     );
   }
 
-  acceptRideRequest(BuildContext context)
-  {
-
-  }
+  // acceptRideRequest(BuildContext context)
+  // async {
+  //   if(widget.code == 'trip.Done')
+  //   {
+  //     Navigator.push(context, MaterialPageRoute(builder: (c)=>MySplashScreen()));
+  //   }
+  //   else
+  //   {
+  //     await confirmPayment();
+  //     Navigator.pop(context);
+  //   }
+  //
+  // }
   canceltRideRequest(BuildContext context)
   {
-
-
+    Navigator.pop(context);
   }
+  // confirmPayment()
+  // async {
+  //   var body = jsonEncode("");
+  //   print("Body::::::::${body}");
+  //   var uri = ('http://209.38.168.38/trip/driver/confirm-payment/${userRideRequestDetails!.id}?driver_id=${currentDriver!.id}');
+  //   print("URL: ${uri}");
+  //   var response = await http.post(Uri.parse(uri),
+  //       headers: {"Content-Type": "application/json"},
+  //       body: body
+  //   );
+  //   if(response.statusCode == 200){
+  //     Fluttertoast.showToast(msg: "Payment successfully");
+  //   }
+  //   else{
+  //     Fluttertoast.showToast(msg: "Error Occurred during Confirm-payment Trip");
+  //     throw Exception('Failed to Confirm-payment Trip');
+  //   }
+  // }
 
 }

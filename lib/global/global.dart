@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:users_app/models/additional_service.dart';
 import 'package:users_app/models/driver.dart';
 import 'package:users_app/models/message.dart';
 import 'package:users_app/models/user_api.dart';
@@ -11,8 +12,9 @@ final FirebaseAuth fAuth = FirebaseAuth.instance;
 User? currentFirebaseUser;
 UserModel? userModelCurrentInfo;
 UserModel_API? currentUser_API;
-UserModel_API? currentUser_API_Info;
-List dList = [];//driverKeys Info List
+late UserModel_API? currentUser_API_Info;
+List dList = [];
+List<AdditionalService> additionalServices = [];//driverKeys Info List
 
 Message? message;
 Driver? currentDriver;
@@ -29,4 +31,4 @@ String userPickUpAddress = "";
 String driverCarDetails = "";
 String driverName = "";
 String driverPhone = "";
-String messageString = "";
+String messageString = "Search Driver Successfully";
