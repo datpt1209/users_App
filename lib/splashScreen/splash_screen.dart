@@ -36,6 +36,9 @@ class _MySplashScreenState extends State<MySplashScreen>
 
     Timer( const Duration(seconds: 5), () async
     {
+       messageString = "Search Driver Successfully";
+       addServices = [];
+       selectedServices = "";
       if(currentUser_API != null)
       {
         Navigator.push(context, MaterialPageRoute(builder: (c)=>MainScreen()));

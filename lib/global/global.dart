@@ -32,3 +32,5 @@ String driverCarDetails = "";
 String driverName = "";
 String driverPhone = "";
 String messageString = "Search Driver Successfully";
+List<String> addServices = [];
+String selectedServices = "";

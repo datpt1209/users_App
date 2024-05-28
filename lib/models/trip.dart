@@ -26,6 +26,16 @@ class Trip {
         messageObject: messageData ,
       );
     }
+    else if(jsonString['code'] == "trip.Scheduled")
+    {
+      Map<String, dynamic> jsonMessageData = json.decode(jsonString['message']);
+      var messageData = Message.fromJsonSchedule(jsonMessageData);
+      return Trip(
+        tripId: jsonString['trip'],
+        code: jsonString['code'],
+        messageObject: messageData ,
+      );
+    }
     else
     {
       return Trip(
