@@ -1237,6 +1237,8 @@ import 'package:users_app/models/vehicle_type.dart';
 import 'package:users_app/widgets/my_drawer.dart';
 import 'package:users_app/widgets/progress_dialog.dart';
 import '../assistants/geofire_assistant.dart';
+import '../assistants/notification_tripEnd.dart';
+import '../assistants/notification_tripIsCancelByDriver.dart';
 import '../infoHandler/app_info.dart';
 import '../models/active_nearby_available_drivers.dart';
 import 'package:http/http.dart' as http;
@@ -1264,12 +1266,10 @@ class MainScreenState extends State<MainScreen> {
 
   double searchLocationContainerHeight = 350;
   double waitingResponseFromDriverUIContainerHeight = 0;
+  double tripEndContainerHeight = 0;
   double assignedDriverContainerHeight = 0;
   double tripArrivedUIContainerHeight = 0;
   int? tripFare;
-
-
-
   String? idTrip;
 
   Position? userCurrentPosition;
@@ -1533,20 +1533,37 @@ class MainScreenState extends State<MainScreen> {
       "${message.vehicle.make} - ${message.vehicle.model} - ${message.vehicle.vehicleNumber}";
       driverPhone = message.driver.phone;
       showUIForAssignedDriverInfo();
-    }else if (currentTrip!.code == "trip.Picking") {
+    }
+
+    else if (currentTrip!.code == "trip.Picking") {
       var message = currentTrip!.messageObject!;
       driverName = message.driver.name;
       driverCarDetails =
           "${message.vehicle.make} - ${message.vehicle.model} - ${message.vehicle.vehicleNumber}";
       driverPhone = message.driver.phone;
       showUIForAssignedDriverInfo();
-    } else if (currentTrip!.code == "trip.End") {
-      messageString = currentTrip!.message!;
-      showMessageResponseFromDriverUI();
-    }else if(currentTrip!.code == "trip.GettingPayment" || currentTrip!.code == "trip.Done")
+    }
+
+    else if (currentTrip!.code == "trip.End") {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) => NotificationTripEnd()
+      );
+      showMessageWhenTripEndUI();
+
+    }
+
+    else if(currentTrip!.code == "trip.GettingPayment" || currentTrip!.code == "trip.Done")
     {
       messageString = currentTrip!.message!;
       showTripArrivedResponseFromDriverUI();
+    }
+    else if(currentTrip!.code == "trip.Cancelled")
+    {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) => NotificationTripIsCancelByCustomer()
+      );
     }
 
     else {
@@ -1636,10 +1653,8 @@ class MainScreenState extends State<MainScreen> {
     }
   }
 
-
-
   saveRideRequestInformation() async {
-    //1. save the RideRequest Information
+
     var originLocation =
         Provider.of<AppInfo>(context, listen: false).userPickUpLocation;
     var destinationLocation =
@@ -1679,7 +1694,7 @@ class MainScreenState extends State<MainScreen> {
     };
 
 
-    Map rideRequest = new Map();
+    Map rideRequest = {};
     if(isSchedule)
     {
       DateTime currentDate = DateTime.now();
@@ -1933,6 +1948,7 @@ class MainScreenState extends State<MainScreen> {
       waitingResponseFromDriverUIContainerHeight = 0;
       assignedDriverContainerHeight = 350;
       tripArrivedUIContainerHeight = 0;
+      tripEndContainerHeight = 0;
     });
   }
 
@@ -1942,14 +1958,16 @@ class MainScreenState extends State<MainScreen> {
       waitingResponseFromDriverUIContainerHeight = 300;
       assignedDriverContainerHeight = 0;
       tripArrivedUIContainerHeight = 0;
+      tripEndContainerHeight = 0;
     });
   }
 
-  showMessageResponseFromDriverUI() {
+  showMessageWhenTripEndUI() {
     setState(() {
-      searchLocationContainerHeight = 0;
+
+      searchLocationContainerHeight = 350;
       waitingResponseFromDriverUIContainerHeight = 0;
-      assignedDriverContainerHeight =350;
+      assignedDriverContainerHeight =0;
       tripArrivedUIContainerHeight = 0;
     });
   }
@@ -1960,6 +1978,7 @@ class MainScreenState extends State<MainScreen> {
       waitingResponseFromDriverUIContainerHeight = 0;
       assignedDriverContainerHeight = 0;
       tripArrivedUIContainerHeight = 300;
+      tripEndContainerHeight = 0;
     });
   }
 
@@ -2014,12 +2033,6 @@ class MainScreenState extends State<MainScreen> {
     print(registrationToken);
     messaging.subscribeToTopic("allDrivers");
     messaging.subscribeToTopic("allUsers");
-  }
-
-  readCurrentCustomerInformation() async {
-    PushNotificationSystem pushNotificationSystem = PushNotificationSystem();
-    pushNotificationSystem.initializeCloudMessaging(context);
-    pushNotificationSystem.generateAndGetToken();
   }
 
   @override
@@ -2110,7 +2123,7 @@ class MainScreenState extends State<MainScreen> {
               child: Container(
                 height: searchLocationContainerHeight,
                 decoration: const BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black,
                   borderRadius: BorderRadius.only(
                     topRight: Radius.circular(20),
                     topLeft: Radius.circular(20),
@@ -2520,7 +2533,7 @@ class MainScreenState extends State<MainScreen> {
               child: Container(
                 height: waitingResponseFromDriverUIContainerHeight,
                 decoration: const BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black,
                   borderRadius: BorderRadius.only(
                     topRight: Radius.circular(20),
                     topLeft: Radius.circular(20),
@@ -2563,7 +2576,7 @@ class MainScreenState extends State<MainScreen> {
             child: Container(
               height: assignedDriverContainerHeight,
               decoration: const BoxDecoration(
-                color: Colors.black54,
+                color: Colors.black,
                 borderRadius: BorderRadius.only(
                   topRight: Radius.circular(20),
                   topLeft: Radius.circular(20),
@@ -2865,7 +2878,7 @@ class MainScreenState extends State<MainScreen> {
             child: Container(
               height: tripArrivedUIContainerHeight,
               decoration: const BoxDecoration(
-                color: Colors.black54,
+                color: Colors.black,
                 borderRadius: BorderRadius.only(
                   topRight: Radius.circular(20),
                   topLeft: Radius.circular(20),
